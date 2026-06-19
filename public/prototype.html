@@ -1,0 +1,1383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TestOps Platform — HW-LAB-PL-01</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;450;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   TestOps Platform — restyled in the Linear design language
+   Near-black surfaces · #5E6AD2 accent · Inter · subtle borders
+   ============================================================ */
+:root{
+  --bg:#08090A;          /* app background (near-black) */
+  --bg-2:#0B0C0E;        /* rail / topbar chrome */
+  --panel:#0E0F11;       /* card surface */
+  --panel-2:#141517;     /* nested surface */
+  --panel-3:#1B1C1F;     /* hover / active */
+  --line:rgba(255,255,255,.07);   /* hairline */
+  --line-2:rgba(255,255,255,.11);  /* stronger divider / control border */
+  --ink:#F7F8F8;         /* primary text */
+  --ink-2:#8A8F98;       /* secondary (Linear gray) */
+  --ink-3:#62666D;       /* tertiary */
+  --ink-4:#42454B;       /* faint */
+
+  --brand:#828BF5;       /* purple — legible accent text/icons */
+  --brand-2:#A2A9F8;
+  --brand-3:#C3C8FB;
+  --brand-cta:#5E6AD2;   /* Linear purple — primary button fill */
+  --brand-dim:rgba(94,106,210,.16);
+  --brand-glow:rgba(94,106,210,.30);
+  --accent:#FC7840;      /* orange — occasional data accent */
+  --accent-2:#FF9466;
+  --accent-dim:rgba(252,120,64,.15);
+
+  --ok:#68CC8C;          /* green */
+  --ok-dim:rgba(104,204,140,.14);
+  --mid:#4EA7FC;         /* blue */
+  --mid-dim:rgba(78,167,252,.15);
+  --low:#6E7178;         /* grey */
+  --low-dim:rgba(110,113,120,.16);
+  --warn:#F2C94C;        /* yellow/amber */
+  --warn-dim:rgba(242,201,76,.14);
+  --bad:#EB5757;         /* red */
+  --bad-dim:rgba(235,87,87,.14);
+  --sig:#5E6AD2; --sig-glow:rgba(94,106,210,.30);
+
+  --r-sm:5px; --r:8px; --r-lg:12px;
+  --rail:224px;
+  --hl:inset 0 1px 0 0 rgba(255,255,255,.04);
+  --shadow:0 1px 2px rgba(0,0,0,.20);
+  --shadow-lg:0 16px 48px rgba(0,0,0,.6);
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --disp:"Inter",system-ui,sans-serif;
+  --ui:"Inter",system-ui,sans-serif;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:var(--ui);
+  color:var(--ink);
+  background:
+    radial-gradient(900px 480px at 78% -12%, rgba(94,106,210,.07), transparent 62%),
+    var(--bg);
+  -webkit-font-smoothing:antialiased;
+  font-size:13.5px;line-height:1.5;letter-spacing:-.003em;
+}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit}
+::selection{background:var(--brand-dim);color:var(--ink)}
+
+*::-webkit-scrollbar{width:8px;height:8px}
+*::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:20px;border:2px solid transparent;background-clip:content-box}
+*::-webkit-scrollbar-thumb:hover{background:var(--ink-4);background-clip:content-box}
+
+/* ============================================================ shell */
+.app{display:grid;grid-template-columns:var(--rail) 1fr;min-height:100vh;position:relative;z-index:1}
+
+.rail{
+  position:sticky;top:0;height:100vh;background:var(--bg-2);
+  border-right:1px solid var(--line);display:flex;flex-direction:column;
+  padding:14px 10px 12px;
+}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 2px}
+.brand .wm{font-family:var(--ui);font-weight:600;font-size:15px;letter-spacing:-.02em;color:var(--ink)}
+.brand .wm b{color:var(--brand);font-weight:600}
+.brand .sub{font-family:var(--ui);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-top:1px;font-weight:500}
+.tagline{font-size:11.5px;color:var(--ink-3);padding:8px 9px 4px}
+
+.nav-group-label{font-family:var(--ui);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);padding:16px 9px 5px;font-weight:510}
+.nav-item{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:6px 9px;border-radius:6px;color:var(--ink-2);font-size:13px;font-weight:500;position:relative;transition:.1s}
+.nav-item svg{flex:0 0 16px;width:16px;height:16px;opacity:.85}
+.nav-item:hover{background:rgba(255,255,255,.05);color:var(--ink)}
+.nav-item.active{background:var(--panel-3);color:var(--ink);font-weight:550}
+.nav-item.active svg{opacity:1;color:var(--brand)}
+.nav-item .badge{margin-left:auto;font-family:var(--ui);font-size:10.5px;background:rgba(255,255,255,.08);color:var(--ink-2);border-radius:5px;padding:1px 6px;font-weight:500}
+.nav-item.soon{color:var(--ink-3)}
+.nav-item.soon .badge{background:rgba(255,255,255,.06);color:var(--ink-3)}
+
+.rail-foot{margin-top:auto;border-top:1px solid var(--line);padding-top:10px}
+.who{display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:6px}
+.who:hover{background:rgba(255,255,255,.05)}
+.avatar{width:26px;height:26px;border-radius:6px;background:linear-gradient(135deg,#3a3f63,#23263b);display:grid;place-items:center;font-family:var(--ui);font-weight:600;font-size:11px;color:var(--brand-2);border:1px solid var(--line-2)}
+.who .nm{font-size:12.5px;font-weight:550;line-height:1.15}
+.who .rl{font-family:var(--ui);font-size:11px;color:var(--ink-3)}
+.spyro{font-family:var(--ui);font-size:9.5px;letter-spacing:.06em;color:var(--ink-4);padding:10px 8px 2px;text-transform:uppercase;font-weight:500}
+
+.main{min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:14px;padding:10px 20px;background:rgba(8,9,10,.72);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.crumbs{font-family:var(--ui);font-size:13px;color:var(--ink-3);white-space:nowrap;font-weight:450}
+.crumbs b{color:var(--ink);font-weight:550}
+
+.query{flex:1;max-width:520px;position:relative}
+.query input{width:100%;height:32px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font-family:var(--ui);font-size:13px;padding:0 14px 0 34px;transition:.12s}
+.query input::placeholder{color:var(--ink-3)}
+.query input:focus{outline:none;border-color:var(--brand-cta);box-shadow:0 0 0 3px var(--brand-dim)}
+.query .qicon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--ink-3)}
+.query .kbd{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-family:var(--ui);font-size:10.5px;color:var(--ink-3);border:1px solid var(--line);border-radius:4px;padding:1px 6px;background:var(--panel-3)}
+
+.top-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+.status-pill{display:flex;align-items:center;gap:8px;font-family:var(--ui);font-size:11.5px;color:var(--ink-2);border:1px solid var(--line);background:var(--panel-2);border-radius:6px;padding:6px 11px}
+.status-pill .mono,.status-pill b{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--ink-2)}
+.dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+.dot.ok{background:var(--ok)} .dot.mid{background:var(--mid)} .dot.low{background:var(--low)}
+.dot.warn{background:var(--warn)} .dot.bad{background:var(--bad)} .dot.brand{background:var(--brand)}
+.dot.live{background:var(--ok);animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 var(--ok-dim)}50%{box-shadow:0 0 0 5px rgba(104,204,140,0)}}
+.iconbtn{width:32px;height:32px;border-radius:6px;border:1px solid transparent;background:transparent;display:grid;place-items:center;color:var(--ink-2);position:relative;transition:.1s}
+.iconbtn:hover{color:var(--ink);background:rgba(255,255,255,.05)}
+.iconbtn .nd{position:absolute;top:6px;right:7px;width:6px;height:6px;border-radius:50%;background:var(--brand-cta);border:1.5px solid var(--bg-2)}
+
+.content{padding:22px;max-width:1500px;width:100%}
+.screen{display:none;animation:fade .2s ease}
+.screen.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap}
+.kicker{font-family:var(--ui);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:550;margin-bottom:7px}
+.page-head h1{font-family:var(--ui);font-weight:600;font-size:22px;letter-spacing:-.022em;margin:0;color:var(--ink)}
+.page-head .lede{color:var(--ink-2);font-size:13px;margin-top:5px}
+.head-actions{display:flex;gap:8px;align-items:center}
+.live-pill{display:inline-flex;align-items:center;gap:7px;font-family:var(--ui);font-size:11.5px;font-weight:550;color:var(--ok);border:1px solid rgba(104,204,140,.4);border-radius:6px;padding:6px 11px;letter-spacing:.02em}
+
+.btn{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:6px;font-size:13px;font-weight:500;border:1px solid var(--line-2);background:var(--panel-2);color:var(--ink);transition:.1s;box-shadow:var(--hl)}
+.btn:hover{background:var(--panel-3)}
+.btn.primary{background:var(--brand-cta);color:#fff;border-color:transparent;font-weight:550;box-shadow:var(--hl),0 1px 2px rgba(0,0,0,.3)}
+.btn.primary:hover{background:#6b76db}
+.btn.accent{background:var(--panel-3);color:var(--ink);border-color:var(--line-2);font-weight:500}
+.btn.accent:hover{background:#26282c}
+.btn.ghost{background:transparent;border-color:transparent;box-shadow:none;color:var(--ink-2)}
+.btn.ghost:hover{background:rgba(255,255,255,.05);color:var(--ink)}
+.btn.danger{color:var(--bad);border-color:rgba(235,87,87,.35);background:transparent;box-shadow:none}
+.btn.danger:hover{background:var(--bad-dim)}
+.btn.sm{height:28px;padding:0 10px;font-size:12.5px}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--hl)}
+.panel-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line)}
+.panel-h h3{margin:0;font-size:13px;font-weight:600;font-family:var(--ui);letter-spacing:-.01em}
+.eyebrow{font-family:var(--ui);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);font-weight:510}
+.panel-b{padding:16px}
+
+.grid{display:grid;gap:16px}
+.g-12{grid-template-columns:repeat(12,1fr)}
+.span-3{grid-column:span 3}.span-4{grid-column:span 4}.span-5{grid-column:span 5}
+.span-6{grid-column:span 6}.span-7{grid-column:span 7}.span-8{grid-column:span 8}
+.span-9{grid-column:span 9}.span-12{grid-column:span 12}
+
+/* KPI */
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:15px 17px;box-shadow:var(--hl);text-align:left}
+.kpi .lab{font-size:12.5px;color:var(--ink-2);font-weight:500}
+.kpi .val{font-family:var(--ui);font-weight:600;font-size:30px;line-height:1.05;letter-spacing:-.03em;font-variant-numeric:tabular-nums;margin:8px 0 6px}
+.kpi .val small{font-size:15px;color:var(--ink-3);font-weight:500}
+.kpi .delta{font-family:var(--ui);font-size:11.5px;display:inline-flex;align-items:center;gap:4px;font-weight:500}
+.delta.up{color:var(--ok)} .delta.down{color:var(--bad)} .delta.flat{color:var(--ink-3)}
+
+/* heatmap */
+.heat{display:grid;grid-template-columns:repeat(6,1fr);gap:9px}
+.bed{border:1px solid var(--line);border-radius:8px;padding:12px 10px;background:var(--panel-2);display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:.12s;text-align:center}
+.bed:hover{border-color:var(--line-2);transform:translateY(-1px)}
+.bed .load{font-family:var(--ui);font-weight:600;font-size:21px;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1}
+.bed .bid{font-family:var(--mono);font-size:10px;color:var(--ink-3)}
+.bed.s-high{background:var(--ok-dim)} .bed.s-high .load{color:var(--ok)}
+.bed.s-mid{background:var(--mid-dim)} .bed.s-mid .load{color:var(--mid)}
+.bed.s-low{background:var(--low-dim)} .bed.s-low .load{color:var(--ink-3)}
+.bed.s-maint{background:var(--warn-dim)} .bed.s-maint .load{color:var(--warn);font-size:13px;letter-spacing:.04em;font-family:var(--mono);font-weight:600}
+.bed.s-error{background:var(--bad-dim)} .bed.s-error .load{color:var(--bad);font-size:15px;letter-spacing:.06em;font-family:var(--mono);font-weight:600}
+
+/* active campaigns mini list */
+.acrow{display:grid;grid-template-columns:auto 1fr auto auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.acrow:last-child{border-bottom:0}
+.acrow .nm{font-size:13px;font-weight:500}
+.acrow .beds{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.acrow .pct{font-family:var(--ui);font-size:13px;font-weight:600;color:var(--ink-2);min-width:40px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* phase bars */
+.barrow{display:grid;grid-template-columns:96px 1fr 42px;gap:12px;align-items:center;padding:6px 0}
+.barrow .nm{font-size:12.5px;color:var(--ink-2)}
+.barrow .track{height:6px;border-radius:4px;background:var(--panel-3);overflow:hidden}
+.barrow .track i{display:block;height:100%;border-radius:4px}
+.barrow .pct{font-family:var(--ui);font-size:12px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink-2)}
+
+/* alerts */
+.alert{display:flex;gap:11px;padding:10px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+.alert:last-child{border-bottom:0}
+.alert .ad{width:8px;height:8px;border-radius:50%;margin-top:5px;flex:0 0 auto}
+.alert .ttl{font-size:12.5px;font-weight:450;line-height:1.4}
+.alert .meta{font-family:var(--mono);font-size:10px;color:var(--ink-3);margin-top:2px}
+.alert .when{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--ink-4);white-space:nowrap}
+
+/* AI insight rows */
+.ai-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:7px;margin-bottom:8px;background:var(--panel-2)}
+.ai-row .l{font-size:12.5px;font-weight:500}
+.ai-row .r{font-family:var(--ui);font-size:12px;font-weight:600}
+.ai-tip{display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--ink-2);padding:10px 12px;background:var(--brand-dim);border-radius:7px;line-height:1.45}
+
+/* tables */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-family:var(--ui);font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:var(--ink-3);text-align:left;padding:9px 14px;border-bottom:1px solid var(--line);font-weight:510;white-space:nowrap}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+.tbl tbody tr{transition:.1s}
+.tbl tbody tr:hover{background:rgba(255,255,255,.025)}
+.tbl tbody tr.clickable{cursor:pointer}
+.tbl .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px}
+.tbl .id{font-family:var(--ui);font-size:12.5px;color:var(--ink-3);font-weight:500}
+
+.chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--ui);font-size:11.5px;font-weight:500;padding:2px 8px;border-radius:6px;border:1px solid transparent;white-space:nowrap;letter-spacing:0}
+.chip .dot{width:6px;height:6px}
+.chip.ok{color:var(--ok);background:var(--ok-dim)} .chip.warn{color:var(--warn);background:var(--warn-dim)}
+.chip.bad{color:var(--bad);background:var(--bad-dim)} .chip.mid{color:var(--mid);background:var(--mid-dim)}
+.chip.brand{color:var(--brand-2);background:var(--brand-dim)} .chip.accent{color:var(--accent);background:var(--accent-dim)}
+.chip.mute{color:var(--ink-2);background:rgba(255,255,255,.06)}
+
+.filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.fchip{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 11px;border-radius:6px;border:1px solid var(--line);background:transparent;font-size:12.5px;color:var(--ink-2);transition:.1s}
+.fchip:hover{color:var(--ink);background:rgba(255,255,255,.04)}
+.fchip.on{background:var(--panel-3);border-color:var(--line-2);color:var(--ink);font-weight:550}
+.search-mini{position:relative;flex:1;min-width:180px;max-width:300px}
+.search-mini input{width:100%;height:30px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);padding:0 10px 0 31px;font-size:12.5px;font-family:var(--ui)}
+.search-mini input:focus{outline:none;border-color:var(--brand-cta);box-shadow:0 0 0 3px var(--brand-dim)}
+.search-mini svg{position:absolute;left:9px;top:7px;color:var(--ink-3)}
+
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.tab{padding:8px 13px;font-size:13px;color:var(--ink-2);border-bottom:1.5px solid transparent;font-weight:500;margin-bottom:-1px}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--ink);border-bottom-color:var(--brand-cta);font-weight:550}
+
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(4,5,6,.6);backdrop-filter:blur(2px);z-index:40;opacity:0;pointer-events:none;transition:.2s}
+.scrim.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;height:100vh;width:min(560px,94vw);background:var(--bg-2);border-left:1px solid var(--line-2);z-index:50;transform:translateX(100%);transition:transform .26s cubic-bezier(.2,.7,.2,1);display:flex;flex-direction:column;box-shadow:var(--shadow-lg)}
+.drawer.open{transform:none}
+.drawer-h{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:14px}
+.drawer-b{padding:20px;overflow-y:auto;flex:1}
+.drawer-x{margin-left:auto;width:30px;height:30px;border-radius:6px;border:1px solid var(--line);display:grid;place-items:center;color:var(--ink-2)}
+.drawer-x:hover{background:rgba(255,255,255,.05);color:var(--ink)}
+.spec{display:grid;grid-template-columns:130px 1fr;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.spec .k{font-family:var(--ui);font-size:12px;color:var(--ink-3)}
+.spec .v.mono{font-family:var(--mono);font-size:12px}
+
+.tl{position:relative;padding-left:22px}
+.tl::before{content:"";position:absolute;left:5px;top:4px;bottom:4px;width:1.5px;background:var(--line-2)}
+.tl-item{position:relative;padding:0 0 16px}
+.tl-item::before{content:"";position:absolute;left:-21px;top:4px;width:9px;height:9px;border-radius:50%;background:var(--bg-2);border:2px solid var(--brand-cta)}
+.tl-item.bad::before{border-color:var(--bad)} .tl-item.ok::before{border-color:var(--ok)} .tl-item.warn::before{border-color:var(--warn)}
+.tl-item .t{font-size:13px;font-weight:500}
+.tl-item .d{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-top:1px}
+
+/* kanban */
+.kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:start}
+.kcol{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);min-height:160px;box-shadow:var(--hl)}
+.kcol-h{display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid var(--line)}
+.kcol-h .nm{font-size:12.5px;font-weight:600;font-family:var(--ui)}
+.kcol-h .ct{margin-left:auto;font-family:var(--ui);font-size:11px;color:var(--ink-3);background:rgba(255,255,255,.06);padding:1px 7px;border-radius:5px}
+.kcol-b{padding:9px;display:flex;flex-direction:column;gap:9px}
+.kcard{background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:11px;cursor:pointer;transition:.12s}
+.kcard:hover{border-color:var(--line-2);background:var(--panel-3)}
+.kcard .kid{font-family:var(--mono);font-size:10px;color:var(--ink-3)}
+.kcard .ktitle{font-size:13px;font-weight:500;margin:3px 0 9px;line-height:1.3}
+.kcard .kfoot{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;color:var(--ink-3)}
+.kcard .prog{height:4px;border-radius:3px;background:var(--panel-3);overflow:hidden;margin:9px 0 4px}
+.kcard .prog i{display:block;height:100%;background:var(--brand-cta)}
+.avatars{display:flex}
+.avatars .a{width:20px;height:20px;border-radius:5px;background:var(--panel-3);color:var(--brand-2);border:1.5px solid var(--panel-2);display:grid;place-items:center;font-family:var(--ui);font-size:9px;font-weight:600;margin-left:-6px}
+.avatars .a:first-child{margin-left:0}
+
+/* recommendation cards */
+.rec{display:grid;grid-template-columns:42px 1fr;gap:14px;padding:16px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel);align-items:start;box-shadow:var(--hl)}
+.rec .ric{width:42px;height:42px;border-radius:9px;display:grid;place-items:center}
+.rec.invest .ric{background:var(--ok-dim);color:var(--ok)} .rec.cut .ric{background:var(--warn-dim);color:var(--warn)} .rec.risk .ric{background:var(--bad-dim);color:var(--bad)}
+.rec .rt{font-size:14px;font-weight:600;font-family:var(--ui);letter-spacing:-.01em}
+.rec .rd{font-size:12.5px;color:var(--ink-2);margin-top:5px;line-height:1.5}
+.rec .rimpact{font-family:var(--ui);font-size:11.5px;margin-top:9px;display:inline-flex;gap:6px;align-items:center;color:var(--ink-3)}
+.rec .rimpact b{color:var(--ink);font-weight:550}
+
+/* NL answer */
+.nl-answer{border:1px solid rgba(94,106,210,.3);background:var(--brand-dim);border-radius:var(--r);padding:16px;margin-bottom:18px}
+.nl-q{font-family:var(--ui);font-size:12.5px;color:var(--brand-2);margin-bottom:10px;display:flex;gap:8px;align-items:center;font-weight:550}
+.nl-summary{font-size:13.5px;line-height:1.55;color:var(--ink)}
+
+/* integration badges */
+.integ{display:flex;gap:7px;flex-wrap:wrap}
+.ibadge{display:inline-flex;align-items:center;gap:7px;font-family:var(--ui);font-size:11.5px;padding:5px 10px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink-2)}
+.ibadge .sd{width:6px;height:6px;border-radius:50%;background:var(--ok)}
+
+/* toast */
+.toasts{position:fixed;bottom:22px;right:22px;z-index:80;display:flex;flex-direction:column;gap:10px}
+.toast{display:flex;align-items:center;gap:11px;background:#1C1D20;border:1px solid var(--line-2);border-radius:8px;padding:11px 14px;box-shadow:var(--shadow-lg);min-width:280px;animation:slidein .25s ease}
+.toast .ti{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;flex:0 0 auto;background:var(--ok-dim);color:var(--ok)}
+.toast.info .ti{background:var(--brand-dim);color:var(--brand)}
+.toast .tx{font-size:13px;font-weight:500} .toast .ts{font-family:var(--ui);font-size:11px;color:var(--ink-3)}
+@keyframes slidein{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
+
+/* remote */
+.remote{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rbtn{display:flex;align-items:center;gap:10px;padding:12px 13px;border:1px solid var(--line);border-radius:7px;background:var(--panel-2);font-size:13px;font-weight:500;text-align:left}
+.rbtn:hover{background:var(--panel-3)}
+.rbtn .ri{width:30px;height:30px;border-radius:7px;background:var(--brand-dim);display:grid;place-items:center;color:var(--brand)}
+.rbtn.warn .ri{background:var(--warn-dim);color:var(--warn)} .rbtn.bad .ri{background:var(--bad-dim);color:var(--bad)}
+.rbtn small{display:block;font-family:var(--mono);font-size:10px;color:var(--ink-3);font-weight:400}
+.mt{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:14px}
+.mt .lab{font-family:var(--ui);font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);font-weight:510}
+.mt .v{font-family:var(--ui);font-weight:600;font-size:25px;font-variant-numeric:tabular-nums;margin-top:5px;letter-spacing:-.03em}
+.mt .v small{font-size:13px;color:var(--ink-3);font-weight:500}
+
+.topo{position:relative;height:360px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel-2);overflow:hidden}
+
+/* roadmap */
+.road{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.road-card{border:1px solid var(--line);border-radius:var(--r);padding:20px;background:var(--panel);box-shadow:var(--hl);position:relative}
+.road-card .ic{width:42px;height:42px;border-radius:10px;background:var(--brand-dim);color:var(--brand);display:grid;place-items:center;margin-bottom:14px}
+.road-card h3{font-family:var(--ui);font-size:15px;font-weight:600;letter-spacing:-.01em;margin:0 0 6px}
+.road-card p{font-size:13px;color:var(--ink-2);line-height:1.55;margin:0}
+.road-card .ph{position:absolute;top:18px;right:18px}
+
+.muted{color:var(--ink-3)} .mono{font-family:var(--mono)}
+.row{display:flex;align-items:center;gap:10px} .between{justify-content:space-between} .wrap{flex-wrap:wrap}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--ui);font-size:11px;color:var(--ink-3)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:9px;height:9px;border-radius:3px;display:inline-block}
+
+/* assets: stats, modal, fields */
+.statrow{display:grid;grid-template-columns:repeat(5,1fr);gap:11px;margin-bottom:16px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:13px 15px;cursor:pointer;transition:.1s;text-align:left;box-shadow:var(--hl)}
+.stat:hover{border-color:var(--line-2);background:var(--panel-2)}
+.stat.on{border-color:var(--brand-cta);background:var(--brand-dim)}
+.stat .l{font-size:11.5px;color:var(--ink-2)}
+.stat .v{font-family:var(--ui);font-weight:600;font-size:23px;margin-top:4px;font-variant-numeric:tabular-nums;letter-spacing:-.03em}
+.bulkbar{display:flex;align-items:center;gap:12px;padding:8px 13px;background:var(--brand-dim);border:1px solid rgba(94,106,210,.3);border-radius:8px;margin-bottom:14px;font-size:13px}
+.linklike{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left}
+.linklike:hover{text-decoration:underline}
+.id.linklike{color:var(--brand-2);font-family:var(--ui);font-size:12.5px;font-weight:500}
+.ract{width:27px;height:27px;border-radius:6px;border:1px solid transparent;background:transparent;display:grid;place-items:center;color:var(--ink-3);transition:.1s}
+.ract:hover{color:var(--ink);background:rgba(255,255,255,.06)}
+.ract.del:hover{color:var(--bad);background:var(--bad-dim)}
+input[type=checkbox]{accent-color:var(--brand-cta);width:15px;height:15px;cursor:pointer}
+.modal-scrim{position:fixed;inset:0;background:rgba(4,5,6,.66);backdrop-filter:blur(3px);z-index:70;display:grid;place-items:center;opacity:0;pointer-events:none;transition:.18s;padding:20px}
+.modal-scrim.open{opacity:1;pointer-events:auto}
+.modal{width:min(540px,100%);max-height:90vh;overflow:auto;background:#161719;border:1px solid var(--line-2);border-radius:12px;box-shadow:var(--shadow-lg);transform:translateY(10px) scale(.99);transition:.2s}
+.modal-scrim.open .modal{transform:none}
+.modal-h{display:flex;align-items:flex-start;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line)}
+.modal-h h3{margin:0;font-family:var(--ui);font-size:15px;font-weight:600;letter-spacing:-.01em}
+.modal-h .sub{font-size:12.5px;color:var(--ink-2);margin-top:3px}
+.modal-x{margin-left:auto;width:28px;height:28px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--ink-2);font-size:14px}
+.modal-x:hover{color:var(--ink);background:rgba(255,255,255,.05)}
+.modal-b{padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+.modal-f{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:9px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-family:var(--ui);font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:var(--ink-3);font-weight:510}
+.field input,.field select,.field textarea{border-radius:6px;border:1px solid var(--line-2);background:var(--panel-2);color:var(--ink);font-family:var(--ui);font-size:13px;padding:8px 11px}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--brand-cta);box-shadow:0 0 0 3px var(--brand-dim)}
+.field textarea{resize:vertical}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:900px){.statrow{grid-template-columns:repeat(2,1fr)}.field-row{grid-template-columns:1fr}}
+@media(max-width:1180px){
+  .heat{grid-template-columns:repeat(4,1fr)} .kanban{grid-template-columns:repeat(2,1fr)}
+  .span-3,.span-4,.span-5,.span-6,.span-7,.span-8,.span-9{grid-column:span 12}
+}
+@media(max-width:820px){
+  .app{grid-template-columns:1fr}
+  .rail{position:fixed;left:0;top:0;z-index:60;transform:translateX(-100%);transition:.24s;width:var(--rail)}
+  .rail.show{transform:none;box-shadow:var(--shadow-lg)}
+  .menu-toggle{display:grid!important}
+  .heat{grid-template-columns:repeat(3,1fr)} .road{grid-template-columns:1fr} .query{display:none}
+}
+.menu-toggle{display:none;width:32px;height:32px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);place-items:center;color:var(--ink-2)}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+:focus-visible{outline:2px solid var(--brand-cta);outline-offset:2px;border-radius:4px}
+
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ===================== RAIL ===================== -->
+  <aside class="rail" id="rail">
+    <div class="brand">
+      <span class="mark">
+        <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+          <rect x="1" y="1" width="28" height="28" rx="8" fill="#141517" stroke="rgba(255,255,255,.10)"/>
+          <path d="M4 16 L9 16 L11.5 9 L15 22 L18 13 L20 16 L26 16" stroke="#828BF5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <circle cx="18" cy="13" r="1.6" fill="#828BF5"/>
+        </svg>
+      </span>
+      <div>
+        <div class="wm">Test<b>Ops</b></div>
+        <div class="sub">Platform</div>
+      </div>
+    </div>
+    <div class="tagline">Smarter testing. Smarter operations.</div>
+
+    <nav id="nav">
+      <div class="nav-group-label">Operate</div>
+      <button class="nav-item active" data-nav="ops">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Live Dashboard
+      </button>
+      <button class="nav-item" data-nav="assets">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="5" rx="1.5"/><rect x="3" y="10" width="18" height="5" rx="1.5"/><rect x="3" y="16" width="18" height="4" rx="1.5"/><circle cx="7" cy="6.5" r="1" fill="currentColor"/><circle cx="7" cy="12.5" r="1" fill="currentColor"/></svg>
+        Assets
+      </button>
+      <button class="nav-item" data-nav="edge">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 12h4l2 6 4-12 2 6h6"/></svg>
+        Edge &amp; Telemetry
+      </button>
+      <button class="nav-item" data-nav="campaigns">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+        Campaigns
+      </button>
+
+      <div class="nav-group-label">Intelligence</div>
+      <button class="nav-item" data-nav="ai">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 3a3 3 0 0 0-3 3 3 3 0 0 0-1 5.8V18a3 3 0 0 0 4 2.8M9 3a2.5 2.5 0 0 1 3 2.4v13.2A2.5 2.5 0 0 1 9 21M15 3a3 3 0 0 1 3 3 3 3 0 0 1 1 5.8V18a3 3 0 0 1-4 2.8M15 3a2.5 2.5 0 0 0-3 2.4"/></svg>
+        AI Insights
+      </button>
+      <button class="nav-item" data-nav="reports">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 3h9l5 5v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5M8 13h8M8 17h5"/></svg>
+        Reports
+      </button>
+
+      <div class="nav-group-label">Administer</div>
+      <button class="nav-item" data-nav="admin">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="18" cy="9" r="2.2"/><path d="M21.5 20c0-2.4-1.6-4.3-3.5-4.3"/></svg>
+        Users &amp; Audit
+      </button>
+
+      <div class="nav-group-label">Roadmap</div>
+      <button class="nav-item soon" data-nav="roadmap">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="4"/></svg>
+        Future modules <span class="badge">4</span>
+      </button>
+    </nav>
+
+    <div class="rail-foot">
+      <div class="who">
+        <div class="avatar">AK</div>
+        <div><div class="nm">A. Kovalenko</div><div class="rl">Test Manager</div></div>
+        <svg style="margin-left:auto;color:var(--ink-3)" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="spyro">Spyrosoft Group</div>
+    </div>
+  </aside>
+
+  <!-- ===================== MAIN ===================== -->
+  <div class="main">
+    <header class="topbar">
+      <button class="menu-toggle" id="menuToggle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+      <div class="crumbs" id="crumbs"><b>Live Dashboard</b></div>
+      <form class="query" id="queryForm" autocomplete="off">
+        <svg class="qicon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+        <input id="queryInput" placeholder="Ask the platform —  e.g. “Show DUTs with uptime < 90% this quarter”">
+        <span class="kbd">⏎</span>
+      </form>
+      <div class="top-actions">
+        <div class="status-pill"><span class="dot live"></span>HW-LAB-PL-01 · 10/12 beds</div>
+        <button class="iconbtn" id="bellBtn" title="alerts"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="nd"></span></button>
+      </div>
+    </header>
+    <main class="content" id="content"></main>
+  </div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer"></aside>
+<div class="toasts" id="toasts"></div>
+<div class="modal-scrim" id="mscrim"></div>
+
+<script>
+/* ============================================================
+   DATA — aligned to TestOps-v0_1 deck (slide 4)
+   ============================================================ */
+const DATA={
+  // ---- Asset registry (modelled on the Spyrosoft Asset Manager screenshots) ----
+  assets:[
+    {tag:"00197",name:"7413",serial:"0435565",model:"CIVIC",cat:"CIVIC",status:"deployed",assignee:"HWM / Cross-domain",location:"Lab 2 · Rack A",cost:"€1,820",value:"€910",audit:{due:true,date:"2026-06-28"},cf:{tnum:"T-2207",star:"I2",sample:"D21",sw:"none",variant:"Premiumplus",market:"USA"}},
+    {tag:"00499",name:"9187",serial:"1019",model:"Umlaut",cat:"Test bench",status:"ready",assignee:null,location:"Lab 2 · Rack B",cost:"€4,500",value:"€3,100",audit:{due:false,date:"2026-09-01"},cf:{tnum:"—",star:"—",sample:"—",sw:"none",variant:"—",market:"—"}},
+    {tag:"00500",name:"9197",serial:"1011",model:"Umlaut",cat:"Test bench",status:"ready",assignee:null,location:"Lab 2 · Rack B",cost:"€4,500",value:"€3,050",audit:{due:true,date:"2026-06-30"},cf:{tnum:"—",star:"—",sample:"—",sw:"none",variant:"—",market:"—"}},
+    {tag:"00502",name:"8507",serial:"—",model:"Artemis",cat:"General Device",status:"ready",assignee:null,location:"Lab 1 · HiL Bay",cost:"€2,200",value:"€1,400",audit:{due:false,date:"2026-10-12"},cf:{tnum:"—",star:"—",sample:"—",sw:"v2.1",variant:"—",market:"EU"}},
+    {tag:"00506",name:"6473",serial:"—",model:"Ramses",cat:"General Device",status:"ready",assignee:null,location:"Lab 1 · HiL Bay",cost:"€2,200",value:"€1,300",audit:{due:false,date:"2026-10-12"},cf:{tnum:"—",star:"—",sample:"—",sw:"v2.1",variant:"—",market:"EU"}},
+    {tag:"00510",name:"6",serial:"—",model:"display super screen",cat:"Video Hardware",status:"ready",assignee:null,location:"Storage · Shelf 4",cost:"€980",value:"€640",audit:{due:false,date:"2026-11-20"},cf:{tnum:"—",star:"—",sample:"—",sw:"none",variant:"—",market:"—"}},
+    {tag:"00516",name:"9158",serial:"15101",model:"Audio Amplifier MB",cat:"Audio Equipment",status:"ready",assignee:null,location:"Storage · Shelf 4",cost:"€560",value:"€380",audit:{due:false,date:"2026-12-01"},cf:{tnum:"—",star:"—",sample:"—",sw:"none",variant:"—",market:"—"}},
+    {tag:"00517",name:"FK: 006",serial:"207163128",model:"Flashing Kit",cat:"Test Hardware",status:"deployed",assignee:"HWM / Cross-domain",location:"Lab 2 · Rack A",cost:"€3,400",value:"€2,600",audit:{due:false,date:"2026-08-15"},cf:{tnum:"T-5106",star:"I1",sample:"—",sw:"v3.1.2",variant:"—",market:"USA"}},
+    {tag:"00518",name:"FK: 007",serial:"207163127",model:"Flashing Kit",cat:"Test Hardware",status:"deployed",assignee:"HWM / Cross-domain",location:"Lab 2 · Rack A",cost:"€3,400",value:"€2,600",audit:{due:false,date:"2026-08-15"},cf:{tnum:"T-5107",star:"I1",sample:"—",sw:"v3.1.2",variant:"—",market:"USA"}},
+    {tag:"00522",name:"7964",serial:"0770969",model:"CIVIC",cat:"CIVIC",status:"deployed",assignee:"Driving Functions",location:"Lab 1 · HiL Bay",cost:"€1,820",value:"€880",audit:{due:false,date:"2026-09-30"},cf:{tnum:"T-2310",star:"I2",sample:"D19",sw:"none",variant:"Base",market:"USA"}},
+    {tag:"00524",name:"—",serial:"0001038",model:"Audio Amplifier MB",cat:"Audio Equipment",status:"deployed",assignee:"Driving Functions",location:"Lab 1 · HiL Bay",cost:"€560",value:"€360",audit:{due:false,date:"2026-12-01"},cf:{tnum:"—",star:"—",sample:"—",sw:"none",variant:"—",market:"—"}},
+    {tag:"00527",name:"—",serial:"0027118",model:"CIVIC",cat:"CIVIC",status:"deployed",assignee:"Vehicle Abstraction",location:"Lab 1 · HiL Bay",cost:"€1,820",value:"€900",audit:{due:false,date:"2026-09-30"},cf:{tnum:"T-2415",star:"I2",sample:"D21",sw:"none",variant:"Premiumplus",market:"CHN"}},
+    {tag:"00095",name:"7208",serial:"0410233",model:"CIVIC",cat:"CIVIC",status:"investigating",assignee:null,location:"Lab 2 · Rack C",cost:"€1,820",value:"€820",audit:{due:true,date:"2026-06-26"},cf:{tnum:"T-2118",star:"I1",sample:"D17",sw:"none",variant:"Base",market:"USA"}},
+    {tag:"00478",name:"8977",serial:"—",model:"AV.io 4K",cat:"Video Hardware",status:"ready",assignee:null,location:"Storage · Shelf 4",cost:"€420",value:"€300",audit:{due:false,date:"2026-11-01"},cf:{tnum:"—",star:"—",sample:"—",sw:"none",variant:"—",market:"—"}},
+    {tag:"00240",name:"FK: 004",serial:"207163099",model:"Flashing Kit",cat:"Test Hardware",status:"ready",assignee:null,location:"Lab 2 · Rack A",cost:"€3,400",value:"€2,700",audit:{due:false,date:"2026-08-15"},cf:{tnum:"T-5104",star:"I1",sample:"—",sw:"v3.1.2",variant:"—",market:"USA"}},
+    {tag:"00466",name:"8984",serial:"—",model:"Video Converter TZ",cat:"Video Hardware",status:"archived",assignee:null,location:"Storage · Shelf 4",cost:"€210",value:"€0",audit:{due:false,date:"—"},cf:{tnum:"—",star:"—",sample:"—",sw:"none",variant:"—",market:"—"}},
+  ],
+  models:[
+    {name:"Umlaut",no:"—",cat:"Test bench",assets:24,assigned:3,remaining:21},
+    {name:"Areus",no:"—",cat:"Test bench",assets:0,assigned:0,remaining:0},
+    {name:"Flashing Kit",no:"—",cat:"Test Hardware",assets:13,assigned:12,remaining:1},
+    {name:"Debugboard",no:"—",cat:"Test Hardware",assets:0,assigned:0,remaining:0},
+    {name:"Artemis",no:"—",cat:"General Device",assets:8,assigned:2,remaining:6},
+    {name:"Ramses",no:"—",cat:"General Device",assets:6,assigned:1,remaining:5},
+    {name:"display super screen",no:"—",cat:"Video Hardware",assets:5,assigned:2,remaining:3},
+    {name:"Audio Amplifier MB",no:"—",cat:"Audio Equipment",assets:6,assigned:3,remaining:3},
+    {name:"CIVIC",no:"—",cat:"CIVIC",assets:132,assigned:110,remaining:22},
+    {name:"iPhone 15 pro",no:"A1688",cat:"Smartphone",assets:0,assigned:0,remaining:0},
+  ],
+  categories:[
+    {name:"Test bench",type:"Asset",qty:88,accept:false},
+    {name:"Test Hardware",type:"Asset",qty:45,accept:true},
+    {name:"Video Hardware",type:"Asset",qty:52,accept:false},
+    {name:"Audio Equipment",type:"Asset",qty:10,accept:false},
+    {name:"PC / Workstation",type:"Asset",qty:64,accept:true},
+    {name:"Network / Interface Hardware",type:"Asset",qty:72,accept:false},
+    {name:"CIVIC",type:"Asset",qty:132,accept:false},
+    {name:"General Device",type:"Asset",qty:27,accept:false},
+    {name:"Phone",type:"Asset",qty:19,accept:false},
+    {name:"Smartphone",type:"Asset",qty:0,accept:false},
+  ],
+  assignees:{teams:["HWM / Cross-domain","Driving Functions","Vehicle Abstraction","Infotainment / IVI"],people:["A. Kovalenko","S. Marek","L. Wójcik","K. Nowak","P. Bakun","W. Pikulski"]},
+  locations:["Lab 2 · Rack A","Lab 2 · Rack B","Lab 2 · Rack C","Lab 1 · HiL Bay","Storage · Shelf 4"],
+  kpis:[
+    {lab:"Farm Uptime",     val:"97.4", unit:"%",   delta:"+1.2% vs last month", dir:"up"},
+    {lab:"Utilization",     val:"73",   unit:"%",   delta:"+5% vs last month",   dir:"up"},
+    {lab:"Active Campaigns",val:"8",    unit:"/12", delta:"4 queued",            dir:"flat"},
+    {lab:"DUTs Online",     val:"41",   unit:"/48", delta:"7 offline / maint.",  dir:"down"},
+  ],
+  // status: high | mid | low | maint | error
+  beds:[
+    {id:"TB-01",load:94,status:"high"},{id:"TB-02",load:88,status:"high"},{id:"TB-03",load:61,status:"mid"},
+    {id:"TB-04",load:0, status:"error",label:"ERR"},{id:"TB-05",load:91,status:"high"},{id:"TB-06",load:70,status:"mid"},
+    {id:"TB-07",load:28,status:"low"},{id:"TB-08",load:85,status:"high"},{id:"TB-09",load:0,status:"maint",label:"MAINT"},
+    {id:"TB-10",load:55,status:"mid"},{id:"TB-11",load:92,status:"high"},{id:"TB-12",load:12,status:"low"},
+  ],
+  activeCampaigns:[
+    {nm:"CAN-Stack Regression v2.4",beds:"TB-01,02",pct:78,dot:"ok"},
+    {nm:"OTA Firmware Update Suite", beds:"TB-05,06",pct:45,dot:"mid"},
+    {nm:"ECU Boot Stress Test",      beds:"TB-08",   pct:91,dot:"brand"},
+    {nm:"HW-in-loop Validation Q2",  beds:"TB-11",   pct:33,dot:"warn"},
+    {nm:"Power Cycle Endurance",     beds:"TB-03",   pct:62,dot:"ok"},
+  ],
+  phases:[
+    {nm:"Smoke",      pct:20,c:"var(--low)"},
+    {nm:"Regression", pct:58,c:"var(--brand)"},
+    {nm:"Unit",       pct:65,c:"var(--ok)"},
+    {nm:"Integration",pct:86,c:"var(--mid)"},
+    {nm:"System",     pct:71,c:"var(--warn)"},
+    {nm:"Endurance",  pct:44,c:"var(--accent)"},
+  ],
+  events:[
+    {dot:"warn",ttl:"TB-09 maintenance — campaign delayed",when:"6m"},
+    {dot:"bad", ttl:"TB-04 CPU temp 89°C — threshold exceeded",when:"14m"},
+    {dot:"mid", ttl:"Firmware v3.1.2 deployed to DUT-14,15",when:"38m"},
+    {dot:"ok",  ttl:"Campaign “CAN-Stack” milestone — 75%",when:"1h"},
+    {dot:"mid", ttl:"DUT-22 booked by K. Nowak (17 Jun)",when:"2h"},
+  ],
+  aiInsights:[
+    {l:"TB-07, TB-12",r:"underutilized",c:"var(--warn)"},
+    {l:"TB-01, TB-02",r:"near capacity",c:"var(--bad)"},
+    {l:"Utilization forecast (30d)",r:"↑ 78%",c:"var(--ok)"},
+    {l:"Overload risk",r:"TB-05 (+14d)",c:"var(--bad)"},
+  ],
+  duts:[
+    {id:"DUT-04", name:"ECU-A2 Boot Controller",type:"Device under test",bed:"TB-04",status:"bad", statusLabel:"Error",    uptime:84.3,temp:89,fw:"v3.1.0",owner:"S. Marek",     cal:"2026-09-02"},
+    {id:"DUT-14", name:"CAN Gateway Node",       type:"Device under test",bed:"TB-01",status:"ok",  statusLabel:"Online",   uptime:99.2,temp:44,fw:"v3.1.2",owner:"L. Wójcik",    cal:"2026-11-20"},
+    {id:"DUT-15", name:"CAN Gateway Node",       type:"Device under test",bed:"TB-02",status:"ok",  statusLabel:"Online",   uptime:98.7,temp:46,fw:"v3.1.2",owner:"L. Wójcik",    cal:"2026-11-20"},
+    {id:"DUT-22", name:"HiL Simulator Rack",     type:"HiL simulator",    bed:"TB-11",status:"ok",  statusLabel:"Online",   uptime:96.4,temp:51,fw:"v7.2.1",owner:"K. Nowak",     cal:"2026-08-11"},
+    {id:"DUT-31", name:"Vector VN1640A",         type:"CAN/LIN interface",bed:"TB-03",status:"warn",statusLabel:"Calibrate",uptime:99.1,temp:42,fw:"v4.9.0",owner:"S. Marek",     cal:"2026-06-18"},
+    {id:"DUT-37", name:"OTA Flash Bench",        type:"Test bench host",  bed:"TB-05",status:"ok",  statusLabel:"Online",   uptime:99.5,temp:40,fw:"v3.1.2",owner:"A. Kovalenko",cal:"—"},
+    {id:"DUT-40", name:"Power Cycle Rig",        type:"Lab resource",     bed:"TB-03",status:"warn",statusLabel:"Calibrate",uptime:99.0,temp:35,fw:"v2.0.4",owner:"System",      cal:"2026-06-20"},
+    {id:"DUT-42", name:"BMS Master Pack",        type:"Device under test",bed:"TB-08",status:"ok",  statusLabel:"Online",   uptime:88.6,temp:48,fw:"v3.1.2",owner:"K. Nowak",     cal:"2026-07-30"},
+    {id:"DUT-45", name:"dSPACE SCALEXIO #2",     type:"HiL simulator",    bed:"TB-10",status:"bad", statusLabel:"Degraded", uptime:84.9,temp:71,fw:"v7.2.1",owner:"A. Kovalenko",cal:"2026-09-02"},
+    {id:"DUT-48", name:"CANoe Bench Host #1",    type:"Test bench host",  bed:"TB-06",status:"ok",  statusLabel:"Online",   uptime:99.6,temp:39,fw:"v16.0", owner:"A. Kovalenko",cal:"—"},
+  ],
+  campaigns:{
+    planned:[
+      {id:"CMP-220",title:"Thermal Endurance Q3",owner:"KN",beds:1,duts:4,due:"Starts Jun 22",integ:"Jenkins",prog:0},
+      {id:"CMP-221",title:"ADAS Sensor Fusion v1",owner:"AK",beds:2,duts:6,due:"Queued · waiting TB-09",integ:"Polarion",prog:0,risk:true},
+    ],
+    progress:[
+      {id:"CMP-201",title:"CAN-Stack Regression v2.4",owner:"LW",beds:2,duts:6,due:"Due Jun 18",integ:"Jira",prog:78},
+      {id:"CMP-205",title:"OTA Firmware Update Suite",owner:"AK",beds:2,duts:8,due:"Due Jun 20",integ:"GitLab CI",prog:45},
+      {id:"CMP-208",title:"ECU Boot Stress Test",owner:"SM",beds:1,duts:5,due:"Due Jun 19",integ:"TestRail",prog:91},
+      {id:"CMP-210",title:"HW-in-loop Validation Q2",owner:"KN",beds:1,duts:4,due:"Due Jun 24",integ:"Jenkins",prog:33},
+      {id:"CMP-212",title:"Power Cycle Endurance",owner:"SM",beds:1,duts:6,due:"Due Jun 21",integ:"Jira",prog:62},
+    ],
+    completed:[{id:"CMP-197",title:"CAN Gateway Smoke v2.3",owner:"SM",beds:1,duts:6,due:"Done Jun 12",integ:"Jenkins",prog:100}],
+    report:[{id:"CMP-190",title:"Power Cycle Endurance — May",owner:"AK",beds:2,duts:7,due:"Report ready",integ:"Jira",prog:100}],
+  },
+  fte:{value:81.2,availability:97.4,utilization:73,passrate:99.6},
+  recs:[
+    {kind:"invest",title:"Add one HiL bed to relieve TB-01 / TB-05",
+     desc:"Integration phase runs at 86% and CAN-Stack + ECU Boot are queued behind it. One more HiL bed clears the recurring queue without delaying campaigns.",
+     impact:[["Throughput","+14%"],["Payback","~4 mo"]]},
+    {kind:"cut",title:"Reclaim TB-07 and TB-12 — underutilized",
+     desc:"Both beds have averaged under 30% for 6 weeks. Reallocating load from TB-05 onto TB-07 reduces overload risk and frees a license seat.",
+     impact:[["Savings","€1.8k/mo"],["Risk","Low"]]},
+    {kind:"risk",title:"Service the TB-04 ECU node before Jun 22",
+     desc:"CPU temperature breached 89°C with 2 unexpected restarts in 14 days — the same signature seen before the dSPACE #2 fault last quarter.",
+     impact:[["Failure prob.","78% / 14d"],["Beds affected","TB-04"]]},
+  ],
+  forecast:{hist:[68,70,69,71,72,72.5,73,73],fc:[73,74.8,76.4,77.2,78]},
+  reports:[
+    {name:"Weekly operations digest",period:"Jun 8–14, 2026",owner:"Auto · Mondays 07:00",fmt:["PDF","XLSX"]},
+    {name:"Monthly management report",period:"May 2026",owner:"Auto · 1st of month",fmt:["PDF","PPTX"]},
+    {name:"Cost per campaign — Q2",period:"Apr–Jun 2026",owner:"A. Kovalenko",fmt:["XLSX"]},
+    {name:"DUT utilization & lifecycle",period:"Rolling 90 days",owner:"Auto · weekly",fmt:["PDF","XLSX"]},
+  ],
+  costs:[
+    {cc:"ADAS Platform",cost:"€48,200",pct:31},{cc:"Powertrain & BMS",cost:"€39,600",pct:25},
+    {cc:"Connectivity / CAN",cost:"€27,300",pct:18},{cc:"Infotainment / OTA",cost:"€24,900",pct:16},
+    {cc:"Shared / overhead",cost:"€15,400",pct:10},
+  ],
+  audit:[
+    {who:"K. Nowak",role:"Tester",act:"Booked DUT-22 to CMP-210 (17 Jun)",when:"Today 09:42"},
+    {who:"S. Marek",role:"Tester",act:"Triggered remote reset on TB-04 node",when:"Today 09:18"},
+    {who:"System",role:"Edge",act:"Firmware v3.1.2 pushed to DUT-14, DUT-15",when:"Today 07:55"},
+    {who:"L. Wójcik",role:"Tester",act:"Created campaign CMP-201",when:"Yesterday 16:30"},
+    {who:"A. Kovalenko",role:"Test Manager",act:"Changed S. Marek role → Tester",when:"Yesterday 11:02"},
+  ],
+  roles:[
+    {name:"Admin",who:1,desc:"Full control — settings, integrations, users, billing"},
+    {name:"Test Manager",who:2,desc:"Campaigns, bookings, reports, edge control"},
+    {name:"Tester",who:5,desc:"Run assigned campaigns, edge control on booked DUTs"},
+    {name:"Read-only",who:8,desc:"Dashboards and reports — no changes"},
+  ],
+  future:[
+    {t:"Load Balancing",d:"Automatic test-bed assignment with campaign queuing and prioritization — keep every bed productive without manual juggling."},
+    {t:"Campaign Simulation",d:"Estimate duration, cost, and the minimum vs optimal resource count before a campaign is ever scheduled."},
+    {t:"Test Feasibility Analysis",d:"Verify a campaign can run on available equipment, flag missing components (e.g. CANoe modules), and estimate completion time."},
+    {t:"Digital Twin Farm",d:"A virtual representation of the physical farm for what-if planning, capacity simulation, and onboarding."},
+  ],
+};
+
+/* ============================================================ SVG helpers */
+function polar(cx,cy,r,a){const rad=(a-90)*Math.PI/180;return[cx+r*Math.cos(rad),cy+r*Math.sin(rad)];}
+function arc(cx,cy,r,a0,a1){const[x0,y0]=polar(cx,cy,r,a1),[x1,y1]=polar(cx,cy,r,a0);const big=a1-a0<=180?0:1;return `M${x0} ${y0} A${r} ${r} 0 ${big} 0 ${x1} ${y1}`;}
+function gaugeSVG(pct){const s=-120,e=120,sw=e-s;const v=s+(pct/100)*sw;const col=pct>=80?"var(--ok)":pct>=60?"var(--warn)":"var(--bad)";
+  return `<svg width="170" height="140" viewBox="0 0 170 140"><path d="${arc(85,90,66,s,e)}" stroke="var(--panel-3)" stroke-width="11" fill="none" stroke-linecap="round"/><path d="${arc(85,90,66,s,v)}" stroke="${col}" stroke-width="11" fill="none" stroke-linecap="round"/></svg>`;}
+function areaForecastSVG(hist,fc){const w=620,h=200,pad=18;const all=[...hist,...fc.slice(1)];const mn=Math.min(...all)-3,mx=Math.max(...all)+3,rng=mx-mn;const n=all.length-1,step=(w-pad*2)/n;const X=i=>pad+i*step,Y=v=>h-pad-((v-mn)/rng)*(h-pad*2);
+  const hp=hist.map((v,i)=>(i?"L":"M")+X(i)+" "+Y(v)).join(" ");const hi=hist.length-1;const fp=fc.map((v,i)=>(i?"L":"M")+X(hi+i)+" "+Y(v)).join(" ");const ha=hp+` L${X(hi)} ${h-pad} L${X(0)} ${h-pad} Z`;
+  let g="";for(let i=0;i<=4;i++){const y=pad+i*((h-pad*2)/4);g+=`<line x1="${pad}" y1="${y}" x2="${w-pad}" y2="${y}" stroke="var(--line)" stroke-width="1"/>`;}
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" style="overflow:visible">${g}<path d="${ha}" fill="var(--brand)" opacity=".08"/><path d="${hp}" fill="none" stroke="var(--brand)" stroke-width="2.4" stroke-linejoin="round"/><path d="${fp}" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-dasharray="5 5" stroke-linejoin="round"/><circle cx="${X(hi)}" cy="${Y(hist[hi])}" r="3.5" fill="var(--brand)"/><circle cx="${X(all.length-1)}" cy="${Y(all[all.length-1])}" r="3.5" fill="var(--accent)"/></svg>`;}
+
+/* ============================================================ SCREENS */
+const SCREENS={};
+
+/* ---------- LIVE DASHBOARD (mirrors slide 4) ---------- */
+SCREENS.ops=()=>`
+  <div class="page-head">
+    <div>
+      <div class="kicker">Live Dashboard</div>
+      <h1>Farm HW-LAB-PL-01</h1>
+      <div class="lede">Real-time overview · auto-refresh 30s · last sync 09:47:12</div>
+    </div>
+    <div class="head-actions">
+      <span class="live-pill"><span class="dot live"></span>LIVE</span>
+      <button class="btn primary sm" data-go="reports"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12M8 11l4 4 4-4M5 21h14"/></svg> Export</button>
+    </div>
+  </div>
+
+  <div class="grid g-12" style="margin-bottom:16px">
+    ${DATA.kpis.map(k=>`
+      <div class="span-3"><div class="kpi">
+        <div class="lab">${k.lab}</div>
+        <div class="val">${k.val}<small>${k.unit}</small></div>
+        <div class="delta ${k.dir}">${k.dir==="up"?"↑":k.dir==="down"?"↓":""} ${k.delta}</div>
+      </div></div>`).join("")}
+  </div>
+
+  <div class="grid g-12" style="margin-bottom:16px">
+    <div class="span-7">
+      <div class="panel">
+        <div class="panel-h"><span class="eyebrow">Test bed heatmap — utilization</span></div>
+        <div class="panel-b">
+          <div class="heat">
+            ${DATA.beds.map(b=>`
+              <button class="bed s-${b.status}" data-bed="${b.id}">
+                <div class="load">${b.label?b.label:b.load+"%"}</div>
+                <div class="bid">${b.id}</div>
+              </button>`).join("")}
+          </div>
+          <div class="legend" style="margin-top:14px">
+            <span><i style="background:var(--ok)"></i>High (&gt;80%)</span>
+            <span><i style="background:var(--mid)"></i>Mid (40–80%)</span>
+            <span><i style="background:var(--low)"></i>Low (&lt;40%)</span>
+            <span><i style="background:var(--warn)"></i>Maint.</span>
+            <span><i style="background:var(--bad)"></i>Error</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="span-5">
+      <div class="panel">
+        <div class="panel-h"><span class="eyebrow">Active campaigns</span><button class="btn ghost sm" data-go="campaigns">View all</button></div>
+        <div class="panel-b" style="padding-top:4px;padding-bottom:4px">
+          ${DATA.activeCampaigns.map(c=>`
+            <div class="acrow">
+              <span class="dot ${c.dot}"></span>
+              <span class="nm">${c.nm}</span>
+              <span class="beds">${c.beds}</span>
+              <span class="pct">${c.pct}%</span>
+            </div>`).join("")}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g-12">
+    <div class="span-4">
+      <div class="panel">
+        <div class="panel-h"><span class="eyebrow">Load per phase</span><span class="chip mid">Integration peak</span></div>
+        <div class="panel-b">
+          ${DATA.phases.map(p=>`
+            <div class="barrow">
+              <div class="nm">${p.nm}</div>
+              <div class="track"><i style="width:${p.pct}%;background:${p.c}"></i></div>
+              <div class="pct" style="color:${p.c}">${p.pct}%</div>
+            </div>`).join("")}
+        </div>
+      </div>
+    </div>
+    <div class="span-4">
+      <div class="panel">
+        <div class="panel-h"><span class="eyebrow">Alerts &amp; events</span><span class="chip bad">1 critical</span></div>
+        <div class="panel-b" style="padding-top:6px;padding-bottom:6px">
+          ${DATA.events.map(e=>`
+            <div class="alert"><span class="ad" style="background:var(--${e.dot})"></span><div style="min-width:0"><div class="ttl">${e.ttl}</div></div><div class="when">${e.when}</div></div>`).join("")}
+        </div>
+      </div>
+    </div>
+    <div class="span-4">
+      <div class="panel">
+        <div class="panel-h"><span class="eyebrow">AI insights</span><span class="chip brand">Powered by AI</span></div>
+        <div class="panel-b">
+          ${DATA.aiInsights.map(a=>`<div class="ai-row"><span class="l">${a.l}</span><span class="r" style="color:${a.c}">${a.r}</span></div>`).join("")}
+          <div class="ai-tip"><span>💡</span><span>Reallocate load to TB-07 to reduce overload on TB-05.</span></div>
+          <button class="btn ghost sm" data-go="ai" style="width:100%;justify-content:center;margin-top:10px">Open AI Insights →</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+/* ---------- ASSETS ---------- */
+SCREENS.assets=(state=assetState)=>{
+  const tab=state.tab||"registry";
+  const tabs=[["registry","Registry"],["models","Models"],["categories","Categories"],["audit","Audit & Calibration"],["topology","Topology"]];
+  const personIc='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="opacity:.6"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.3 3.1-6 7-6s7 2.7 7 6"/></svg>';
+  const eye='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.6"/></svg>';
+  const pencil='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h4L18 10l-4-4L4 16z"/><path d="M14 6l4 4"/></svg>';
+  const clone='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V4h12"/></svg>';
+  const trash='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>';
+
+  let body="";
+  if(tab==="registry"){
+    const vis=visibleAssets();
+    const selN=state.sel.size;
+    const cards=[["all","Total assets","509"],["deployed","Deployed","415"],["ready","Ready to Deploy","94"],["audit","Due for Audit","6"],["archived","Archived","12"]];
+    body=`
+    <div class="statrow">
+      ${cards.map(([f,l,v])=>`<button class="stat ${state.filter===f?"on":""}" data-afilter="${f}"><div class="l">${l}</div><div class="v">${v}</div></button>`).join("")}
+    </div>
+    <div class="filters">
+      <div class="search-mini"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input id="assetSearch" placeholder="Search tag, name, serial, model…"></div>
+      <button class="fchip ${state.filter==="all"?"on":""}" data-afilter="all">All</button>
+      <button class="fchip ${state.filter==="ready"?"on":""}" data-afilter="ready">Ready to Deploy</button>
+      <button class="fchip ${state.filter==="deployed"?"on":""}" data-afilter="deployed">Deployed</button>
+      <button class="fchip ${state.filter==="audit"?"on":""}" data-afilter="audit">Due for Audit</button>
+      <button class="fchip ${state.filter==="archived"?"on":""}" data-afilter="archived">Archived</button>
+    </div>
+    ${selN?`<div class="bulkbar"><b>${selN}</b> selected<button class="btn primary sm" data-bulk-checkout>Bulk checkout</button><button class="btn ghost sm" data-bulk-clear>Clear selection</button></div>`:""}
+    <div class="panel">
+      <div style="overflow-x:auto"><table class="tbl">
+        <thead><tr>
+          <th style="width:30px"><input type="checkbox" data-sel-all ${selN&&selN===vis.length?"checked":""}></th>
+          <th>Asset Tag</th><th>Name</th><th>Serial</th><th>Model</th><th>Category</th><th>Status</th><th>Checked Out To</th><th>Location</th><th>Cost</th><th>Checkin/Checkout</th><th>Actions</th>
+        </tr></thead>
+        <tbody>
+          ${vis.map(a=>{const st=STATUS[a.status];const search=(a.tag+" "+a.name+" "+a.serial+" "+a.model+" "+a.cat).toLowerCase();
+            const cta=a.status==="ready"?`<button class="btn primary sm" data-checkout="${a.tag}">Checkout</button>`
+                     :a.status==="deployed"?`<button class="btn accent sm" data-checkin="${a.tag}">Checkin</button>`
+                     :`<span class="muted mono" style="font-size:11px">—</span>`;
+            return `<tr data-search="${search}">
+              <td><input type="checkbox" data-sel="${a.tag}" ${state.sel.has(a.tag)?"checked":""}></td>
+              <td><button class="id linklike" data-asset="${a.tag}">${a.tag}</button></td>
+              <td><button class="linklike" style="font-weight:500" data-asset="${a.tag}">${a.name}</button></td>
+              <td class="mono muted">${a.serial}</td>
+              <td>${a.model}</td>
+              <td class="muted">${a.cat}</td>
+              <td><span class="chip ${st.c}">${a.status!=="archived"?`<span class="dot ${st.c==="mute"?"low":st.c}"></span>`:""}${st.l}</span></td>
+              <td>${a.assignee?`<span class="row" style="gap:6px">${personIc}${a.assignee}</span>`:'<span class="muted">—</span>'}</td>
+              <td class="muted">${a.location}</td>
+              <td class="mono">${a.cost}</td>
+              <td>${cta}</td>
+              <td><div class="row" style="gap:5px">
+                <button class="ract" data-asset="${a.tag}" title="View">${eye}</button>
+                <button class="ract" data-edit="${a.tag}" title="Edit">${pencil}</button>
+                <button class="ract" data-clone="${a.tag}" title="Clone">${clone}</button>
+                <button class="ract del" data-del="${a.tag}" title="Delete">${trash}</button>
+              </div></td>
+            </tr>`;}).join("")}
+        </tbody>
+      </table></div>
+      <div class="row between" style="padding:12px 16px;border-top:1px solid var(--line)"><span class="muted mono" style="font-size:11px">Showing ${vis.length} of 509 assets</span><span class="muted mono" style="font-size:11px">page 1 / 17</span></div>
+    </div>`;
+  }
+  else if(tab==="models"){
+    body=`<div class="panel">
+      <div class="panel-h"><span class="eyebrow">Asset models</span><button class="btn accent sm" data-act="new-model"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 5v14M5 12h14"/></svg> Add model</button></div>
+      <div style="overflow-x:auto"><table class="tbl">
+        <thead><tr><th>Name</th><th>Model No.</th><th>Category</th><th>Assets</th><th>Assigned</th><th>Remaining</th><th style="width:180px">% Remaining</th><th>Actions</th></tr></thead>
+        <tbody>${DATA.models.map(m=>{const pct=m.assets?Math.round(m.remaining/m.assets*100):0;const col=pct>40?"var(--ok)":pct>15?"var(--warn)":"var(--bad)";return `<tr>
+          <td style="font-weight:500">${m.name}</td><td class="mono muted">${m.no}</td><td class="muted">${m.cat}</td>
+          <td class="mono">${m.assets}</td><td class="mono">${m.assigned}</td><td class="mono">${m.remaining}</td>
+          <td><div style="height:7px;border-radius:5px;background:var(--panel-3);overflow:hidden"><i style="display:block;height:100%;width:${pct}%;background:${m.assets?col:"transparent"}"></i></div></td>
+          <td><div class="row" style="gap:5px"><button class="ract" data-act="edit-model" title="Edit">${pencil}</button><button class="ract del" data-act="del-model" title="Delete">${trash}</button></div></td></tr>`;}).join("")}</tbody>
+      </table></div>
+    </div>`;
+  }
+  else if(tab==="categories"){
+    body=`<div class="panel">
+      <div class="panel-h"><span class="eyebrow">Categories</span><button class="btn accent sm" data-act="new-category"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 5v14M5 12h14"/></svg> Add category</button></div>
+      <table class="tbl">
+        <thead><tr><th>Name</th><th>Type</th><th>Assets (QTY)</th><th>Acceptance</th><th>Actions</th></tr></thead>
+        <tbody>${DATA.categories.map(c=>`<tr><td style="font-weight:500">${c.name}</td><td class="muted">${c.type}</td><td class="mono">${c.qty}</td><td>${c.accept?'<span class="chip ok">Required</span>':'<span class="muted">—</span>'}</td><td><div class="row" style="gap:5px"><button class="ract" data-act="edit-cat" title="Edit">${pencil}</button><button class="ract del" data-act="del-cat" title="Delete">${trash}</button></div></td></tr>`).join("")}</tbody>
+      </table>
+    </div>`;
+  }
+  else if(tab==="audit"){
+    const due=DATA.assets.filter(a=>a.audit&&a.audit.due);
+    body=`<div class="panel">
+      <div class="panel-h"><h3>Due for audit &amp; calibration</h3><span class="chip warn">${due.length} due ≤30 days</span></div>
+      <table class="tbl">
+        <thead><tr><th>Asset</th><th>Category</th><th>Action</th><th>Next audit</th><th>Status</th></tr></thead>
+        <tbody>
+          ${due.map(a=>`<tr class="clickable" data-asset="${a.tag}"><td><span class="id">${a.tag}</span> &nbsp;${a.name}</td><td class="muted">${a.cat}</td><td>Audit / calibration</td><td class="mono" style="color:var(--warn)">${a.audit.date}</td><td><span class="chip warn"><span class="dot warn"></span>Due soon</span></td></tr>`).join("")}
+          <tr><td><span class="id">00095</span> &nbsp;7208 (CIVIC)</td><td class="muted">CIVIC</td><td>Service / predicted failure</td><td class="mono" style="color:var(--bad)">2026-06-22 · AI</td><td><span class="chip bad"><span class="dot bad"></span>At risk</span></td></tr>
+        </tbody>
+      </table>
+    </div>`;
+  }
+  else if(tab==="topology"){
+    body=`<div class="panel">
+      <div class="panel-h"><span class="eyebrow">Physical layout · Lab 2 · Rack rows A–C</span></div>
+      <div class="panel-b">
+        <div class="topo" id="topoSvg"></div>
+        <div class="legend" style="margin-top:14px"><span><i style="background:var(--brand)"></i>Test bed</span><span><i style="background:var(--accent)"></i>Edge node</span><span><i style="background:var(--ok)"></i>active link</span><span><i style="background:var(--ink-4)"></i>idle</span></div>
+      </div>
+    </div>`;
+  }
+
+  return `
+  <div class="page-head">
+    <div><div class="kicker">Asset Management</div><h1>Assets</h1><div class="lede">Hardware inventory · register, book and track DUTs and test equipment · synced with client Asset Manager · QR-tagged</div></div>
+    <div class="head-actions">
+      <button class="btn ghost sm" data-act="scan-qr"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Scan QR</button>
+      <button class="btn primary sm" data-register><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg> Register equipment</button>
+    </div>
+  </div>
+  <div class="tabs">${tabs.map(([k,l])=>`<button class="tab ${tab===k?"on":""}" data-atab="${k}">${l}</button>`).join("")}</div>
+  ${body}`;
+};
+
+/* ---------- EDGE (TB-04 node, per deck alert) ---------- */
+SCREENS.edge=()=>{
+  const temps=[58,60,63,66,70,74,79,83,87,89];
+  return `
+  <div class="page-head">
+    <div><div class="kicker">Edge Data Collection</div><h1>Edge &amp; Telemetry</h1><div class="lede">NUC collectors co-located with DUTs · live metrics where the device has no data interface</div></div>
+    <div class="head-actions"><div class="search-mini" style="max-width:240px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input value="EN-04 · TB-04 node" readonly></div></div>
+  </div>
+
+  <div class="panel" style="border-color:var(--bad);background:var(--bad-dim);margin-bottom:16px">
+    <div class="panel-b" style="display:flex;gap:12px;align-items:center">
+      <span class="dot bad" style="width:10px;height:10px"></span>
+      <div><div style="font-weight:600;font-size:13.5px">Anomaly — CPU temperature 89°C, threshold (85°C) exceeded</div><div class="mono" style="font-size:10.5px;color:var(--ink-2);margin-top:2px">Detected 09:38:04 · sustained 6m · 2 unexpected restarts in last 14 days</div></div>
+      <button class="btn danger sm" style="margin-left:auto" data-act="reset">Reset node</button>
+    </div>
+  </div>
+
+  <div class="grid g-12">
+    <div class="span-8">
+      <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px">
+        <div class="mt"><div class="lab">CPU temp</div><div class="v" style="color:var(--bad)">89<small>°C</small></div></div>
+        <div class="mt"><div class="lab">CPU load</div><div class="v">97<small>%</small></div></div>
+        <div class="mt"><div class="lab">Uptime</div><div class="v">0<small>d 02h</small></div></div>
+        <div class="mt"><div class="lab">Firmware</div><div class="v" style="font-size:18px">v3.1.0</div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><span class="eyebrow">CPU temperature · last 10 min · 1s</span><div class="row"><span class="chip mute" data-cmp>compare EN-06</span><span class="chip bad">threshold 85°C</span></div></div>
+        <div class="panel-b">
+          <svg viewBox="0 0 620 180" width="100%" height="180" style="overflow:visible">
+            ${(()=>{const mn=55,mx=92;const Y=v=>180-18-((v-mn)/(mx-mn))*(180-36);const ty=Y(85);return `<line x1="18" y1="${ty}" x2="602" y2="${ty}" stroke="var(--bad)" stroke-width="1" stroke-dasharray="4 4"/><text x="600" y="${ty-5}" fill="var(--bad)" font-size="10" font-family="var(--mono)" text-anchor="end">85°C</text>`;})()}
+            ${(()=>{const mn=55,mx=92,n=temps.length-1,step=(620-36)/n;const Y=v=>180-18-((v-mn)/(mx-mn))*(180-36);const p=temps.map((v,i)=>(i?"L":"M")+(18+i*step)+" "+Y(v)).join(" ");return `<path d="${p} L${18+n*step} 162 L18 162 Z" fill="var(--bad)" opacity=".08"/><path d="${p}" fill="none" stroke="var(--bad)" stroke-width="2.4" stroke-linejoin="round"/><circle cx="${18+n*step}" cy="${Y(temps[n])}" r="4" fill="var(--bad)"/>`;})()}
+          </svg>
+        </div>
+      </div>
+    </div>
+    <div class="span-4">
+      <div class="panel">
+        <div class="panel-h"><h3>Remote control</h3><span class="chip ok"><span class="dot ok"></span>Reachable</span></div>
+        <div class="panel-b">
+          <div class="remote">
+            <button class="rbtn" data-act="start"><span class="ri"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5v14l11-7z"/></svg></span><span>Start test<small>resume queue</small></span></button>
+            <button class="rbtn warn" data-act="stop"><span class="ri"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></span><span>Stop test<small>halt current</small></span></button>
+            <button class="rbtn bad" data-act="reset"><span class="ri"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></span><span>Reset device<small>power cycle</small></span></button>
+            <button class="rbtn" data-act="flash"><span class="ri"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12M8 11l4 4 4-4M5 21h14"/></svg></span><span>Flash firmware<small>v3.1.0 → v3.1.2</small></span></button>
+          </div>
+          <div class="spec" style="margin-top:14px"><span class="k">co-located DUT</span><span class="v mono">DUT-04 (ECU)</span></div>
+          <div class="spec"><span class="k">test bed</span><span class="v mono">TB-04</span></div>
+          <div class="spec" style="border-bottom:0"><span class="k">collector since</span><span class="v mono">2026-05-04</span></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+};
+
+/* ---------- CAMPAIGNS ---------- */
+SCREENS.campaigns=()=>{
+  const cols=[["planned","Planned","low"],["progress","In Progress","mid"],["completed","Completed","ok"],["report","Report","brand"]];
+  const card=c=>`
+    <div class="kcard" data-camp-card="${c.id}">
+      <div class="row between"><span class="kid">${c.id}</span>${c.risk?'<span class="chip bad" style="font-size:9px;padding:1px 7px"><span class="dot bad"></span>delayed</span>':''}</div>
+      <div class="ktitle">${c.title}</div>
+      ${c.prog>0&&c.prog<100?`<div class="prog"><i style="width:${c.prog}%"></i></div>`:""}
+      <div class="kfoot"><div class="avatars"><span class="a">${c.owner}</span></div><span>· ${c.beds} bed${c.beds>1?"s":""} · ${c.duts} DUTs</span><span style="margin-left:auto" class="chip mute" style="font-size:9px">${c.integ}</span></div>
+      <div class="kfoot" style="margin-top:6px">${c.due}</div>
+    </div>`;
+  return `
+  <div class="page-head">
+    <div><div class="kicker">Campaign Management</div><h1>Campaigns</h1><div class="lede">Plan, schedule and resource test campaigns · linked to Jira · Jenkins · TestRail · GitLab CI</div></div>
+    <div class="head-actions">
+      <div class="integ" style="margin-right:6px"><span class="ibadge"><span class="sd"></span>Jira</span><span class="ibadge"><span class="sd"></span>Jenkins</span><span class="ibadge"><span class="sd" style="background:var(--warn)"></span>TestRail</span></div>
+      <button class="btn primary sm" data-act="new-campaign"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg> New campaign</button>
+    </div>
+  </div>
+  <div class="kanban">
+    ${cols.map(([key,label,dot])=>`
+      <div class="kcol">
+        <div class="kcol-h"><span class="dot ${dot}"></span><span class="nm">${label}</span><span class="ct">${DATA.campaigns[key].length}</span></div>
+        <div class="kcol-b">${DATA.campaigns[key].map(card).join("")}</div>
+      </div>`).join("")}
+  </div>
+
+  <div class="panel" style="margin-top:18px">
+    <div class="panel-h"><span class="eyebrow">Next 7 days · resource availability</span><div class="legend"><span><i style="background:var(--brand)"></i>booked</span><span><i style="background:var(--panel-3)"></i>free</span><span><i style="background:var(--warn)"></i>maintenance</span></div></div>
+    <div class="panel-b" style="overflow-x:auto">
+      <div style="min-width:640px">
+        <div style="display:grid;grid-template-columns:130px repeat(7,1fr);gap:4px;margin-bottom:8px"><div></div>${["Mon 16","Tue 17","Wed 18","Thu 19","Fri 20","Sat 21","Sun 22"].map(d=>`<div class="mono" style="font-size:10px;color:var(--ink-3);text-align:center">${d}</div>`).join("")}</div>
+        ${[["TB-01",[1,1,1,0,0,0,1]],["TB-05",[1,1,1,1,1,0,0]],["TB-09",[2,2,0,0,0,0,0]],["DUT-22 (HiL)",[1,1,0,1,1,0,0]],["K. Nowak",[0,1,1,1,0,0,0]],["S. Marek",[1,1,1,0,0,0,1]]].map(([nm,days])=>`
+          <div style="display:grid;grid-template-columns:130px repeat(7,1fr);gap:4px;margin-bottom:4px;align-items:center">
+            <div class="mono" style="font-size:11px;color:var(--ink-2)">${nm}</div>
+            ${days.map(s=>`<div style="height:26px;border-radius:6px;background:${s===1?'var(--brand-dim)':s===2?'var(--warn-dim)':'var(--panel-2)'};border:1px solid ${s===1?'rgba(74,71,201,.3)':s===2?'rgba(236,154,30,.3)':'var(--line)'}"></div>`).join("")}
+          </div>`).join("")}
+      </div>
+    </div>
+  </div>`;
+};
+
+/* ---------- AI INSIGHTS ---------- */
+SCREENS.ai=(state={})=>{
+  const ic={invest:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 7v6h-6"/></svg>',cut:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7l6 6 4-4 8 8"/><path d="M21 17v-6h-6"/></svg>',risk:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>'};
+  return `
+  <div class="page-head">
+    <div><div class="kicker">Powered by AI</div><h1>AI Insights</h1><div class="lede">KPI trend analysis · 30-day forecasting · recommendations · failure prediction · natural-language queries</div></div>
+    <span class="chip brand"><span class="dot brand"></span>Model updated 06:00</span>
+  </div>
+
+  ${state.answer?`
+  <div class="nl-answer">
+    <div class="nl-q"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>${state.answer.q}</div>
+    <div class="nl-summary">${state.answer.summary}</div>
+    ${state.answer.rows?`<div class="panel" style="margin-top:12px"><table class="tbl"><thead><tr><th>ID</th><th>Equipment</th><th>Uptime</th><th>Status</th></tr></thead><tbody>${state.answer.rows.map(d=>`<tr class="clickable" data-dut="${d.id}"><td class="id">${d.id}</td><td>${d.name}</td><td class="mono" style="color:var(--bad)">${d.uptime}%</td><td><span class="chip ${d.status}"><span class="dot ${d.status}"></span>${d.statusLabel}</span></td></tr>`).join("")}</tbody></table></div>`:""}
+  </div>`:`
+  <div class="panel" style="margin-bottom:18px;padding:14px 16px">
+    <div class="eyebrow" style="margin-bottom:10px">Ask in plain English</div>
+    <div class="row wrap" style="gap:8px">
+      ${["Show DUTs with uptime < 90% this quarter","which campaigns are at risk this week","where should I cut cost","forecast utilization for next month"].map(q=>`<button class="fchip" data-nlq="${q}">${q}</button>`).join("")}
+    </div>
+  </div>`}
+
+  <div class="grid g-12" style="margin-bottom:16px">
+    <div class="span-8">
+      <div class="panel">
+        <div class="panel-h"><span class="eyebrow">Utilization · 8 weeks actual + 4 weeks forecast</span><div class="legend"><span><i style="background:var(--brand)"></i>actual</span><span><i style="background:var(--accent)"></i>forecast</span></div></div>
+        <div class="panel-b">
+          ${areaForecastSVG(DATA.forecast.hist,DATA.forecast.fc)}
+          <div style="display:flex;gap:28px;margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
+            <div><div class="eyebrow">Now</div><div style="font-family:var(--disp);font-size:22px;font-weight:800">73%</div></div>
+            <div><div class="eyebrow">Forecast (30d)</div><div style="font-family:var(--disp);font-size:22px;font-weight:800;color:var(--accent)">78%</div></div>
+            <div><div class="eyebrow">Confidence</div><div style="font-family:var(--disp);font-size:22px;font-weight:800">±2pt</div></div>
+            <div style="margin-left:auto;align-self:center;max-width:230px;font-size:12px;color:var(--ink-2)">Forecast assumes current campaign load and no hardware changes.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="span-4">
+      <div class="panel" style="height:100%">
+        <div class="panel-h"><h3>Proposed metric — FTE</h3><span class="chip mute">not in v0.1 deck</span></div>
+        <div class="panel-b" style="text-align:center">
+          <div style="position:relative;display:inline-block">${gaugeSVG(DATA.fte.value)}
+            <div style="position:absolute;left:0;right:0;top:50px;text-align:center"><div style="font-family:var(--disp);font-weight:800;font-size:30px">${DATA.fte.value}<small style="font-size:15px;color:var(--ink-3)">%</small></div></div>
+          </div>
+          <div style="font-size:12px;color:var(--ink-2);line-height:1.5;text-align:left;border-top:1px solid var(--line);padding-top:12px;margin-top:6px"><b>Farm Throughput Effectiveness</b> = Availability × Utilization × Pass-rate — an OEE-class single number for "how much real throughput we extract from the hardware." Suggested addition to the Live Dashboard.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding:6px 2px 14px"><h3 style="font-size:16px;font-family:var(--disp);margin:0">Recommendations</h3></div>
+  <div class="grid" style="grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px">
+    ${DATA.recs.map(r=>`
+      <div class="rec ${r.kind}">
+        <div class="ric">${ic[r.kind]}</div>
+        <div>
+          <span class="chip ${r.kind==="invest"?"ok":r.kind==="cut"?"warn":"bad"}">${r.kind==="invest"?"Invest":r.kind==="cut"?"Cut cost":"Failure prediction"}</span>
+          <div class="rt" style="margin-top:8px">${r.title}</div>
+          <div class="rd">${r.desc}</div>
+          <div class="row" style="gap:18px;margin-top:4px">${r.impact.map(([k,v])=>`<div class="rimpact">${k} <b>${v}</b></div>`).join("")}</div>
+        </div>
+      </div>`).join("")}
+  </div>
+
+  <div class="panel">
+    <div class="panel-h"><span class="eyebrow">Anomaly detection</span><span class="chip bad">2 active</span></div>
+    <div class="panel-b" style="padding-top:6px;padding-bottom:6px">
+      <div class="alert"><span class="ad" style="background:var(--bad)"></span><div><div class="ttl">TB-04 node temperature deviates 3.4σ from norm</div><div class="meta">vs 30-day baseline for this node class</div></div></div>
+      <div class="alert"><span class="ad" style="background:var(--warn)"></span><div><div class="ttl">ECU Boot Stress pass-rate dropped to 91.2%</div><div class="meta">historical norm 98.6% · failures clustered in boot step</div></div></div>
+      <div class="alert" style="border-bottom:0"><span class="ad" style="background:var(--brand)"></span><div><div class="ttl">Defect dedup — 14 reports → 3 root causes</div><div class="meta">saved ~5h triage this week</div></div></div>
+    </div>
+  </div>`;
+};
+
+/* ---------- REPORTS ---------- */
+SCREENS.reports=()=>`
+  <div class="page-head">
+    <div><div class="kicker">Reporting &amp; Analytics</div><h1>Reports</h1><div class="lede">Automated management reporting · cost per campaign / DUT / project · cost-center tracking</div></div>
+    <div class="head-actions"><button class="btn primary sm"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg> New report</button></div>
+  </div>
+  <div class="grid g-12">
+    <div class="span-7">
+      <div class="panel">
+        <div class="panel-h"><h3>Scheduled &amp; saved reports</h3><span class="chip ok"><span class="dot ok"></span>4 active</span></div>
+        <table class="tbl">
+          <thead><tr><th>Report</th><th>Period</th><th>Schedule / owner</th><th>Export</th></tr></thead>
+          <tbody>${DATA.reports.map(r=>`<tr><td style="font-weight:500">${r.name}</td><td class="muted">${r.period}</td><td class="mono muted" style="font-size:12px">${r.owner}</td><td><div class="row" style="gap:6px">${r.fmt.map(f=>`<button class="chip mute" data-act="export-${f}">${f}</button>`).join("")}</div></td></tr>`).join("")}</tbody>
+        </table>
+      </div>
+    </div>
+    <div class="span-5">
+      <div class="panel">
+        <div class="panel-h"><span class="eyebrow">Quarter to date · cost by cost-center</span><span style="font-family:var(--disp);font-size:14px;font-weight:700">€155,400</span></div>
+        <div class="panel-b">
+          ${DATA.costs.map(c=>`<div class="barrow" style="grid-template-columns:160px 1fr 70px"><div class="nm">${c.cc}</div><div class="track"><i style="width:${c.pct*3}%;background:var(--brand)"></i></div><div class="pct">${c.cost}</div></div>`).join("")}
+          <div style="font-size:12px;color:var(--ink-2);margin-top:14px;line-height:1.5">Cost is allocated per campaign-hour of booked equipment plus per-DUT overhead, then rolled up to the project cost-center.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="grid g-12" style="margin-top:16px">
+    ${[["Cost / campaign","€6,890"],["Cost / DUT-month","€341"],["Most expensive","ADAS · €48.2k"]].map(([l,v])=>`<div class="span-4"><div class="kpi" style="text-align:left"><div class="lab">${l}</div><div class="val" style="font-size:26px;margin-top:6px">${v}</div></div></div>`).join("")}
+  </div>`;
+
+/* ---------- ADMIN ---------- */
+SCREENS.admin=()=>`
+  <div class="page-head"><div><div class="kicker">Users &amp; Permissions</div><h1>Users &amp; Audit</h1><div class="lede">Role-based access · full audit trail of who changed what and when</div></div>
+  <button class="btn primary sm"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg> Invite user</button></div>
+  <div class="grid g-12">
+    <div class="span-5">
+      <div class="panel">
+        <div class="panel-h"><h3>Roles</h3><span class="muted mono" style="font-size:11px">16 members</span></div>
+        <div class="panel-b" style="display:flex;flex-direction:column;gap:10px">
+          ${DATA.roles.map(r=>`<div style="border:1px solid var(--line);border-radius:10px;padding:13px 14px"><div class="row between"><div style="font-weight:600;font-size:13.5px">${r.name}</div><span class="chip mute">${r.who} ${r.who===1?"member":"members"}</span></div><div style="font-size:12.5px;color:var(--ink-2);margin-top:5px">${r.desc}</div></div>`).join("")}
+        </div>
+      </div>
+    </div>
+    <div class="span-7">
+      <div class="panel">
+        <div class="panel-h"><h3>Audit log</h3><div class="search-mini" style="max-width:200px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input placeholder="Filter events…"></div></div>
+        <table class="tbl">
+          <thead><tr><th>When</th><th>User</th><th>Action</th></tr></thead>
+          <tbody>${DATA.audit.map(a=>`<tr><td class="mono muted" style="font-size:12px;white-space:nowrap">${a.when}</td><td><div style="font-weight:500">${a.who}</div><div class="mono" style="font-size:10px;color:var(--ink-3)">${a.role}</div></td><td>${a.act}</td></tr>`).join("")}</tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+
+/* ---------- ROADMAP (slide 3 future modules) ---------- */
+SCREENS.roadmap=()=>`
+  <div class="page-head"><div><div class="kicker">Roadmap</div><h1>Future modules</h1><div class="lede">Planned extensions to the platform — start with what you need today, add modules as you scale.</div></div></div>
+  <div class="road">
+    ${DATA.future.map((f,i)=>`
+      <div class="road-card">
+        <span class="ph chip ${i<2?'accent':'mute'}">${i<2?'Next':'Later'}</span>
+        <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">${i===0?'<path d="M3 12h6l2-4 2 8 2-4h6"/>':i===1?'<path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 4-6"/>':i===2?'<path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>':'<rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/>'}</svg></div>
+        <h3>${f.t}</h3>
+        <p>${f.d}</p>
+      </div>`).join("")}
+  </div>`;
+
+/* ============================================================ DRAWER */
+function dutDrawer(id){
+  const d=DATA.duts.find(x=>x.id===id)||DATA.duts[0];
+  return `
+  <div class="drawer-h">
+    <div style="width:46px;height:46px;border-radius:12px;background:var(--brand-dim);display:grid;place-items:center">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="1.6"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="15" y="15" width="3" height="3"/><rect x="19" y="15" width="2" height="3"/><rect x="15" y="19" width="6" height="2"/></svg>
+    </div>
+    <div style="flex:1">
+      <div class="mono" style="font-size:11px;color:var(--brand)">${d.id}</div>
+      <div style="font-family:var(--disp);font-size:18px;font-weight:700">${d.name}</div>
+      <div class="row" style="gap:8px;margin-top:6px"><span class="chip ${d.status}"><span class="dot ${d.status}"></span>${d.statusLabel}</span><span class="chip mute">${d.type}</span></div>
+    </div>
+    <button class="drawer-x" data-close><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  </div>
+  <div class="drawer-b">
+    <div class="row" style="gap:9px;margin-bottom:18px">
+      <button class="btn primary sm" data-go="edge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h4l2 6 4-12 2 6h6"/></svg> Live telemetry</button>
+      <button class="btn ghost sm" data-act="book">Book to campaign</button>
+      <button class="btn ghost sm" data-act="qr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> QR tag</button>
+    </div>
+    <span class="eyebrow">Specifications</span>
+    <div style="margin-top:10px">
+      <div class="spec"><span class="k">test bed</span><span class="v mono">${d.bed}</span></div>
+      <div class="spec"><span class="k">uptime (90d)</span><span class="v mono" style="color:${d.uptime<90?'var(--bad)':'var(--ink)'}">${d.uptime}%</span></div>
+      <div class="spec"><span class="k">firmware</span><span class="v mono">${d.fw}</span></div>
+      <div class="spec"><span class="k">temperature</span><span class="v mono" style="color:${d.temp>70?'var(--bad)':d.temp>55?'var(--warn)':'var(--ink)'}">${d.temp}°C</span></div>
+      <div class="spec"><span class="k">owner</span><span class="v">${d.owner}</span></div>
+      <div class="spec"><span class="k">next calibration</span><span class="v mono">${d.cal}</span></div>
+    </div>
+    <span class="eyebrow" style="display:block;margin-top:22px">Device history</span>
+    <div class="tl" style="margin-top:14px">
+      <div class="tl-item warn"><div class="t">Calibration scheduled</div><div class="d">2026-06-18</div></div>
+      <div class="tl-item"><div class="t">Booked to CMP-201 · CAN-Stack Regression</div><div class="d">A. Kovalenko · 2026-06-09 09:42</div></div>
+      <div class="tl-item bad"><div class="t">Firmware rollback after failed self-test</div><div class="d">2026-05-22</div></div>
+      <div class="tl-item ok"><div class="t">Repair completed — connector reseated</div><div class="d">vendor RMA · 2026-04-30</div></div>
+      <div class="tl-item ok"><div class="t">Registered &amp; QR-tagged</div><div class="d">PO-8842 · 2025-11-12</div></div>
+    </div>
+    <span class="eyebrow" style="display:block;margin-top:22px">Documentation</span>
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+      ${["Datasheet — rev C.pdf","Calibration certificate 2026.pdf","Wiring schematic.pdf"].map(f=>`<div class="row" style="gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:9px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="1.7"><path d="M6 2h8l4 4v16H6z"/><path d="M14 2v4h4"/></svg><span style="font-size:12.5px">${f}</span><svg style="margin-left:auto;color:var(--ink-3)" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12M8 11l4 4 4-4M5 21h14"/></svg></div>`).join("")}
+    </div>
+  </div>`;
+}
+
+/* ============================================================ ROUTER */
+const content=document.getElementById('content'), crumbs=document.getElementById('crumbs');
+const TITLES={ops:"Live Dashboard",assets:"Assets",edge:"Edge & Telemetry",campaigns:"Campaigns",ai:"AI Insights",reports:"Reports",admin:"Users & Audit",roadmap:"Future modules"};
+let assetState={tab:"registry",filter:"all",sel:new Set()}, aiState={}, current="ops";
+function render(s){current=s;let h;if(s==="assets")h=SCREENS.assets(assetState);else if(s==="ai")h=SCREENS.ai(aiState);else h=SCREENS[s]();
+  content.innerHTML=`<section class="screen active">${h}</section>`;crumbs.innerHTML=`<b>${TITLES[s]}</b>`;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.nav===s));window.scrollTo(0,0);
+  if(s==="assets"&&assetState.tab==="topology")drawTopology();}
+function go(s){if(s!=="ai")aiState={};render(s);document.getElementById('rail').classList.remove('show');}
+document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('[data-nav]');if(b)go(b.dataset.nav);});
+
+content.addEventListener('click',e=>{
+  const g=e.target.closest('[data-go]');if(g){go(g.dataset.go);return;}
+  const dut=e.target.closest('[data-dut]');if(dut){openDrawer(dut.dataset.dut);return;}
+  const bed=e.target.closest('[data-bed]');if(bed){toast("Bed "+bed.dataset.bed,"Opening bed detail…","info");return;}
+  const cc=e.target.closest('[data-camp-card]');if(cc){toast("Campaign "+cc.dataset.campCard,"Opening campaign detail…","info");return;}
+  const at=e.target.closest('[data-atab]');if(at){assetState.tab=at.dataset.atab;render("assets");return;}
+  const af=e.target.closest('[data-afilter]');if(af){assetState.filter=af.dataset.afilter;render("assets");return;}
+  const nlq=e.target.closest('[data-nlq]');if(nlq){runQuery(nlq.dataset.nlq);return;}
+  const cmp=e.target.closest('[data-cmp]');if(cmp){toast("Comparison added","Overlaying EN-06 baseline","info");return;}
+  const act=e.target.closest('[data-act]');if(act){handleAction(act.dataset.act);return;}
+});
+function handleAction(a){
+  if(a==="reset")toast("Reset command sent","TB-04 node power-cycling · ~40s to rejoin");
+  else if(a==="start")toast("Test started","Queue resumed");
+  else if(a==="stop")toast("Test stopped","Current run halted");
+  else if(a==="flash")toast("Firmware flashing","v3.1.0 → v3.1.2 · do not power off","info");
+  else if(a==="book")toast("Booking opened","Select a campaign and date range");
+  else if(a==="qr")toast("QR tag","Printable tag generated","info");
+  else if(a==="new-campaign")toast("New campaign","Opening campaign builder…","info");
+  else if(a&&a.startsWith("export-"))toast("Export started",a.split("-")[1]+" generating…","info");
+  else toast("Done","Action completed");
+}
+const drawer=document.getElementById('drawer'),scrim=document.getElementById('scrim');
+function openDrawer(id){drawer.innerHTML=dutDrawer(id);drawer.classList.add('open');scrim.classList.add('open');}
+function closeDrawer(){drawer.classList.remove('open');scrim.classList.remove('open');}
+scrim.addEventListener('click',closeDrawer);
+drawer.addEventListener('click',e=>{if(e.target.closest('[data-close]'))closeDrawer();const g=e.target.closest('[data-go]');if(g){closeDrawer();go(g.dataset.go);}const co=e.target.closest('[data-checkout]');if(co){closeDrawer();openCheckoutModal([co.dataset.checkout]);}const ci=e.target.closest('[data-checkin]');if(ci){closeDrawer();openCheckinModal(ci.dataset.checkin);}const a=e.target.closest('[data-act]');if(a)handleAction(a.dataset.act);});
+document.addEventListener('keydown',e=>{if(e.key==="Escape"){closeDrawer();closeModal();}});
+const toasts=document.getElementById('toasts');
+function toast(t,s,type){const el=document.createElement('div');el.className="toast "+(type||"");el.innerHTML=`<div class="ti">${type==="info"?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 16v-5M12 8h.01"/></svg>':'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 13l4 4L19 7"/></svg>'}</div><div><div class="tx">${t}</div>${s?`<div class="ts">${s}</div>`:""}</div>`;toasts.appendChild(el);setTimeout(()=>{el.style.transition="opacity .3s,transform .3s";el.style.opacity="0";el.style.transform="translateX(20px)";setTimeout(()=>el.remove(),300);},3200);}
+
+const QUERIES={
+  "show DUTs with uptime < 90% this quarter":{summary:`Found <b>3 devices</b> below the 90% uptime threshold this quarter. The <b>TB-04 ECU node</b> is the worst and is also flagged for predicted failure — recommend pulling it before the ECU Boot Stress deadline.`,rows:()=>DATA.duts.filter(d=>d.uptime<90)},
+  "which campaigns are at risk this week":{summary:`<b>1 campaign</b> is at risk: <b>ADAS Sensor Fusion v1 (CMP-221)</b> is queued behind <b>TB-09 maintenance</b> and will slip unless the bed returns a day early. CAN-Stack Regression is on track at 78%.`},
+  "where should I cut cost":{summary:`<b>TB-07</b> and <b>TB-12</b> have averaged under 30% utilization for 6 weeks. Reallocating load from the overloaded TB-05 onto TB-07 reduces overload risk and frees roughly <b>€1,800/month</b>. See the "Cut cost" recommendation below.`},
+  "forecast utilization for next month":{summary:`Utilization is forecast to rise from <b>73%</b> to <b>78%</b> over the next 30 days (±2pt), assuming current campaign load and no hardware changes. Adding one HiL bed would lift the ceiling another ~14%.`}
+};
+function runQuery(q){const key=q.toLowerCase().trim();
+  const m=Object.keys(QUERIES).find(k=>k.toLowerCase()===key)||(key.includes("uptime")?"show DUTs with uptime < 90% this quarter":key.includes("risk")?"which campaigns are at risk this week":(key.includes("cost")||key.includes("cut"))?"where should I cut cost":(key.includes("forecast")||key.includes("utilization"))?"forecast utilization for next month":null);
+  if(m){const o=QUERIES[m];aiState={answer:{q:q,summary:o.summary,rows:o.rows?o.rows():null}};render("ai");}
+  else{aiState={answer:{q:q,summary:`No exact match in this demo. Try: "Show DUTs with uptime < 90% this quarter", "which campaigns are at risk this week", "where should I cut cost", or "forecast utilization for next month".`}};render("ai");}
+}
+const qForm=document.getElementById('queryForm'),qInput=document.getElementById('queryInput');
+qForm.addEventListener('submit',e=>{e.preventDefault();const v=qInput.value.trim();if(v){runQuery(v);qInput.blur();}});
+document.getElementById('bellBtn').addEventListener('click',()=>go('ops'));
+document.getElementById('menuToggle').addEventListener('click',()=>document.getElementById('rail').classList.toggle('show'));
+
+function drawTopology(){const host=document.getElementById('topoSvg');if(!host)return;const W=host.clientWidth||800,H=360;
+  const beds=[["TB-01",.12,.25],["TB-02",.12,.62],["TB-03",.30,.20],["TB-04",.30,.55],["TB-05",.50,.30],["TB-06",.50,.70],["TB-08",.70,.22],["TB-11",.70,.58],["TB-12",.88,.40]];
+  const edges=[["EN-04",.30,.55],["EN-06",.50,.70]];const cx=W*.5,cy=H*.45;let s=`<svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}">`;
+  s+=`<circle cx="${cx}" cy="${cy}" r="26" fill="var(--bg-2)" stroke="var(--brand)" stroke-width="1.6"/><text x="${cx}" y="${cy-32}" fill="var(--ink-3)" font-size="10" font-family="var(--mono)" text-anchor="middle">CORE SWITCH</text><text x="${cx}" y="${cy+4}" fill="var(--brand)" font-size="9" font-family="var(--mono)" text-anchor="middle">10GbE</text>`;
+  beds.forEach((b,i)=>{const x=W*b[1],y=H*b[2];const on=i%4!==3;s+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${on?'var(--ok)':'var(--ink-4)'}" stroke-width="${on?1.4:1}" opacity="${on?.45:.3}"/>`;});
+  beds.forEach(b=>{const x=W*b[1],y=H*b[2];s+=`<g><rect x="${x-26}" y="${y-16}" width="52" height="32" rx="8" fill="var(--bg-2)" stroke="var(--brand)" stroke-width="1.2"/><text x="${x}" y="${y+4}" fill="var(--ink)" font-size="10" font-family="var(--mono)" text-anchor="middle">${b[0]}</text></g>`;});
+  edges.forEach(eg=>{const x=W*eg[1]+34,y=H*eg[2]-30;s+=`<g><rect x="${x-22}" y="${y-12}" width="44" height="24" rx="7" fill="var(--accent-dim)" stroke="var(--accent)" stroke-width="1.1"/><text x="${x}" y="${y+4}" fill="var(--accent)" font-size="9" font-family="var(--mono)" text-anchor="middle">${eg[0]}</text></g>`;});
+  s+=`</svg>`;host.innerHTML=s;}
+window.addEventListener('resize',()=>{if(current==="assets"&&assetState.tab==="topology")drawTopology();});
+
+/* ===================== ASSET MANAGEMENT LOGIC ===================== */
+const STATUS={ready:{c:"ok",l:"Ready to Deploy"},deployed:{c:"brand",l:"Deployed"},investigating:{c:"warn",l:"Investigating"},archived:{c:"mute",l:"Archived"}};
+function assetByTag(t){return DATA.assets.find(a=>a.tag===t);}
+function visibleAssets(){const f=assetState.filter;return DATA.assets.filter(a=>{
+  if(f==="ready")return a.status==="ready";
+  if(f==="deployed")return a.status==="deployed";
+  if(f==="archived")return a.status==="archived";
+  if(f==="audit")return a.audit&&a.audit.due;
+  return true;});}
+
+function assetDrawer(tag){
+  const a=assetByTag(tag); if(!a) return "";
+  const st=STATUS[a.status];
+  const cta=a.status==="ready"?`<button class="btn primary sm" data-checkout="${a.tag}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg> Checkout</button>`
+           :a.status==="deployed"?`<button class="btn accent sm" data-checkin="${a.tag}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> Checkin</button>`:"";
+  return `
+  <div class="drawer-h">
+    <div style="width:46px;height:46px;border-radius:12px;background:var(--brand-dim);display:grid;place-items:center">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="15" y="15" width="3" height="3"/><rect x="19" y="15" width="2" height="3"/><rect x="15" y="19" width="6" height="2"/></svg>
+    </div>
+    <div style="flex:1">
+      <div class="mono" style="font-size:11px;color:var(--brand)">#${a.tag}</div>
+      <div style="font-family:var(--disp);font-size:18px;font-weight:700">${a.name!=="—"?a.name:a.model}</div>
+      <div class="row" style="gap:8px;margin-top:6px"><span class="chip ${st.c}">${a.status!=="archived"?`<span class="dot ${st.c==="mute"?"low":st.c}"></span>`:""}${st.l}</span><span class="chip mute">${a.cat}</span></div>
+    </div>
+    <button class="drawer-x" data-close><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  </div>
+  <div class="drawer-b">
+    <div class="row" style="gap:9px;margin-bottom:18px">
+      ${cta}
+      <button class="btn ghost sm" data-act="edit-asset">Edit</button>
+      <button class="btn ghost sm" data-act="qr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> QR tag</button>
+    </div>
+    ${a.assignee?`<div class="ai-row" style="margin-bottom:16px"><span class="l">Checked out to</span><span class="r" style="color:var(--brand)">${a.assignee}</span></div>`:""}
+    <span class="eyebrow">Specifications</span>
+    <div style="margin-top:10px">
+      <div class="spec"><span class="k">serial</span><span class="v mono">${a.serial}</span></div>
+      <div class="spec"><span class="k">model</span><span class="v">${a.model}</span></div>
+      <div class="spec"><span class="k">category</span><span class="v">${a.cat}</span></div>
+      <div class="spec"><span class="k">default location</span><span class="v">${a.location}</span></div>
+      <div class="spec"><span class="k">purchase cost</span><span class="v mono">${a.cost}</span></div>
+      <div class="spec"><span class="k">current value</span><span class="v mono">${a.value}</span></div>
+      <div class="spec"><span class="k">next audit</span><span class="v mono" style="color:${a.audit&&a.audit.due?'var(--warn)':'var(--ink)'}">${a.audit?a.audit.date:'—'}</span></div>
+    </div>
+    <span class="eyebrow" style="display:block;margin-top:22px">Custom fields</span>
+    <div style="margin-top:10px">
+      <div class="spec"><span class="k">T number</span><span class="v mono">${a.cf.tnum}</span></div>
+      <div class="spec"><span class="k">STAR</span><span class="v mono">${a.cf.star}</span></div>
+      <div class="spec"><span class="k">Sample</span><span class="v mono">${a.cf.sample}</span></div>
+      <div class="spec"><span class="k">SW version</span><span class="v mono">${a.cf.sw}</span></div>
+      <div class="spec"><span class="k">Variant</span><span class="v">${a.cf.variant}</span></div>
+      <div class="spec"><span class="k">Market</span><span class="v">${a.cf.market}</span></div>
+    </div>
+    <span class="eyebrow" style="display:block;margin-top:22px">Activity history</span>
+    <div class="tl" style="margin-top:14px">
+      ${a.audit&&a.audit.due?`<div class="tl-item warn"><div class="t">Audit due</div><div class="d">${a.audit.date}</div></div>`:""}
+      ${a.assignee?`<div class="tl-item"><div class="t">Checked out to ${a.assignee}</div><div class="d">A. Kovalenko · 2026-06-15 09:42</div></div>`:`<div class="tl-item ok"><div class="t">Checked in — Ready to Deploy</div><div class="d">P. Bakun · 2026-06-04 10:18</div></div>`}
+      <div class="tl-item"><div class="t">Field update — SW version</div><div class="d">P. Bakun · 2026-06-04 11:38</div></div>
+      <div class="tl-item ok"><div class="t">Registered &amp; QR-tagged</div><div class="d">import · 2025-11-12</div></div>
+    </div>
+    <span class="eyebrow" style="display:block;margin-top:22px">Documentation</span>
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+      ${["Datasheet.pdf","Calibration certificate.pdf","Wiring schematic.pdf"].map(f=>`<div class="row" style="gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:9px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="1.7"><path d="M6 2h8l4 4v16H6z"/><path d="M14 2v4h4"/></svg><span style="font-size:12.5px">${f}</span><svg style="margin-left:auto;color:var(--ink-3)" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12M8 11l4 4 4-4M5 21h14"/></svg></div>`).join("")}
+    </div>
+  </div>`;
+}
+function openAssetDrawer(tag){drawer.innerHTML=assetDrawer(tag);drawer.classList.add('open');scrim.classList.add('open');}
+
+/* ---- modal ---- */
+const mscrim=document.getElementById('mscrim');
+function openModal(h){mscrim.innerHTML=`<div class="modal">${h}</div>`;mscrim.classList.add('open');}
+function closeModal(){mscrim.classList.remove('open');setTimeout(()=>{if(!mscrim.classList.contains('open'))mscrim.innerHTML='';},220);}
+let pendingTags=[];
+function assigneeOptions(){return `<optgroup label="Teams">`+DATA.assignees.teams.map(x=>`<option>${x}</option>`).join("")+`</optgroup><optgroup label="People">`+DATA.assignees.people.map(x=>`<option>${x}</option>`).join("")+`</optgroup>`;}
+function locationOptions(sel){return DATA.locations.map(x=>`<option ${x===sel?"selected":""}>${x}</option>`).join("");}
+
+function openCheckoutModal(tags){pendingTags=tags;const many=tags.length>1;const a=many?null:assetByTag(tags[0]);
+  openModal(`
+    <div class="modal-h"><div><h3>Check out ${many?tags.length+" assets":(a.name!=="—"?a.name:a.model)+" · #"+a.tag}</h3><div class="sub">Assign hardware to a tester, team or campaign</div></div><button class="modal-x" data-mclose>✕</button></div>
+    <div class="modal-b">
+      <div class="field"><label>Check out to</label><select id="coAssignee">${assigneeOptions()}</select></div>
+      <div class="field-row">
+        <div class="field"><label>Location</label><select id="coLocation">${locationOptions(a?a.location:"")}</select></div>
+        <div class="field"><label>Expected checkin</label><input id="coDate" type="date" value="2026-06-30"></div>
+      </div>
+      <div class="field"><label>Campaign (optional)</label><select id="coCampaign"><option value="">— none —</option>${DATA.campaigns.progress.map(c=>`<option>${c.id} · ${c.title}</option>`).join("")}</select></div>
+      <div class="field"><label>Notes</label><textarea id="coNotes" rows="2" placeholder="Optional"></textarea></div>
+    </div>
+    <div class="modal-f"><button class="btn ghost sm" data-mclose>Cancel</button><button class="btn primary sm" data-confirm-checkout>Confirm checkout</button></div>`);}
+function doCheckout(){const who=document.getElementById('coAssignee').value;const loc=document.getElementById('coLocation').value;
+  pendingTags.forEach(t=>{const a=assetByTag(t);if(a){a.status="deployed";a.assignee=who;a.location=loc;}});
+  const n=pendingTags.length;closeModal();assetState.sel.clear();render("assets");toast(n+" asset"+(n>1?"s":"")+" checked out","Assigned to "+who);}
+
+function openCheckinModal(tag){pendingTags=[tag];const a=assetByTag(tag);
+  openModal(`
+    <div class="modal-h"><div><h3>Check in ${(a.name!=="—"?a.name:a.model)} · #${a.tag}</h3><div class="sub">Return asset to inventory</div></div><button class="modal-x" data-mclose>✕</button></div>
+    <div class="modal-b">
+      <div style="font-size:13px;color:var(--ink-2);line-height:1.5">Currently checked out to <b style="color:var(--ink)">${a.assignee||"—"}</b>. Checking it in makes it available for booking again.</div>
+      <div class="field"><label>Condition on return</label><select id="ciCond"><option>OK — Ready to Deploy</option><option>Needs calibration / audit</option><option>Fault — Investigating</option></select></div>
+    </div>
+    <div class="modal-f"><button class="btn ghost sm" data-mclose>Cancel</button><button class="btn accent sm" data-confirm-checkin="${tag}">Confirm checkin</button></div>`);}
+function doCheckin(tag){const a=assetByTag(tag);const cond=(document.getElementById('ciCond')||{}).value||"";
+  if(a){a.assignee=null;a.status=cond.includes("calibration")||cond.includes("Fault")?"investigating":"ready";if(cond.includes("calibration"))a.audit={due:true,date:"2026-07-01"};}
+  closeModal();render("assets");toast("Checked in",a?("#"+a.tag+" returned to inventory"):"Asset returned");}
+
+function nextTag(){const m=DATA.assets.reduce((x,a)=>Math.max(x,parseInt(a.tag)||0),0);return String(m+1).padStart(5,"0");}
+function openRegisterModal(){const tag=nextTag();
+  openModal(`
+    <div class="modal-h"><div><h3>Register equipment</h3><div class="sub">Add a new hardware asset to inventory</div></div><button class="modal-x" data-mclose>✕</button></div>
+    <div class="modal-b">
+      <div class="field-row"><div class="field"><label>Asset tag</label><input id="rgTag" value="${tag}"></div><div class="field"><label>Serial</label><input id="rgSerial" placeholder="Serial number"></div></div>
+      <div class="field-row"><div class="field"><label>Model</label><select id="rgModel">${DATA.models.map(m=>`<option>${m.name}</option>`).join("")}</select></div><div class="field"><label>Category</label><select id="rgCat">${DATA.categories.filter(c=>c.type==="Asset").map(c=>`<option>${c.name}</option>`).join("")}</select></div></div>
+      <div class="field-row"><div class="field"><label>Status</label><select id="rgStatus"><option>Ready to Deploy</option><option>Pending</option><option>Investigating</option></select></div><div class="field"><label>Default location</label><select id="rgLoc">${locationOptions("")}</select></div></div>
+      <div class="field"><label>Asset name</label><input id="rgName" placeholder="e.g. 7415"></div>
+      <div class="field-row"><div class="field"><label>Variant</label><input id="rgVariant" placeholder="e.g. Premiumplus"></div><div class="field"><label>Market</label><input id="rgMarket" placeholder="e.g. USA"></div></div>
+    </div>
+    <div class="modal-f"><button class="btn ghost sm" data-mclose>Cancel</button><button class="btn primary sm" data-confirm-register>Register asset</button></div>`);}
+function doRegister(){const g=id=>document.getElementById(id);
+  const a={tag:g('rgTag').value||nextTag(),name:g('rgName').value||g('rgTag').value,serial:g('rgSerial').value||"—",model:g('rgModel').value,cat:g('rgCat').value,status:"ready",assignee:null,location:g('rgLoc').value,cost:"—",value:"—",audit:{due:false,date:"2026-12-01"},cf:{tnum:"—",star:"—",sample:"—",sw:"none",variant:g('rgVariant').value||"—",market:g('rgMarket').value||"—"}};
+  DATA.assets.unshift(a);closeModal();assetState.filter="all";render("assets");toast("Asset registered","#"+a.tag+" · "+a.model+" added to inventory");}
+
+mscrim.addEventListener('click',e=>{
+  if(e.target===mscrim||e.target.closest('[data-mclose]')){closeModal();return;}
+  if(e.target.closest('[data-confirm-checkout]')){doCheckout();return;}
+  const ci=e.target.closest('[data-confirm-checkin]');if(ci){doCheckin(ci.dataset.confirmCheckin);return;}
+  if(e.target.closest('[data-confirm-register]')){doRegister();return;}
+});
+
+/* ---- asset-specific clicks / selection / search ---- */
+content.addEventListener('click',e=>{
+  const co=e.target.closest('[data-checkout]');if(co){openCheckoutModal([co.dataset.checkout]);return;}
+  const ci=e.target.closest('[data-checkin]');if(ci){openCheckinModal(ci.dataset.checkin);return;}
+  if(e.target.closest('[data-register]')){openRegisterModal();return;}
+  if(e.target.closest('[data-bulk-checkout]')){if(assetState.sel.size)openCheckoutModal([...assetState.sel]);return;}
+  if(e.target.closest('[data-bulk-clear]')){assetState.sel.clear();render("assets");return;}
+  const ed=e.target.closest('[data-edit]');if(ed){openAssetDrawer(ed.dataset.edit);return;}
+  const cl=e.target.closest('[data-clone]');if(cl){toast("Cloned","#"+cl.dataset.clone+" duplicated as draft");return;}
+  const dl=e.target.closest('[data-del]');if(dl){const t=dl.dataset.del;DATA.assets=DATA.assets.filter(a=>a.tag!==t);assetState.sel.delete(t);render("assets");toast("Deleted","#"+t+" removed from inventory");return;}
+  const as=e.target.closest('[data-asset]');if(as){openAssetDrawer(as.dataset.asset);return;}
+});
+content.addEventListener('change',e=>{
+  const s=e.target.closest('[data-sel]');if(s){if(s.checked)assetState.sel.add(s.dataset.sel);else assetState.sel.delete(s.dataset.sel);render("assets");return;}
+  if(e.target.closest('[data-sel-all]')){const on=e.target.checked;if(on)visibleAssets().forEach(a=>assetState.sel.add(a.tag));else assetState.sel.clear();render("assets");return;}
+});
+content.addEventListener('input',e=>{
+  if(e.target.id==="assetSearch"){const v=e.target.value.toLowerCase();document.querySelectorAll('tr[data-search]').forEach(r=>{r.style.display=r.dataset.search.includes(v)?"":"none";});}
+});
+
+render('ops');
+</script>
+</body>
+</html>
