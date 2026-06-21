@@ -809,8 +809,8 @@ function WiringDiagram({ bench, assets }: { bench: TestBench; assets: Asset[] })
                 <div style={{ display: "flex", alignItems: "center" }}>
                   {/* Connector line */}
                   <div style={{ flexShrink: 0, width: 90, position: "relative", height: 44 }}>
-                    <div style={{ position: "absolute", left: 0, right: 0, top: "50%", height: 1, background: ba.state === "active" ? "rgba(104,204,140,.4)" : ba.state === "fault" ? "rgba(235,87,87,.3)" : "rgba(255,255,255,.07)", transform: "translateY(-50%)" }} />
-                    <div style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", width: 0, height: 0, borderTop: "4px solid transparent", borderBottom: "4px solid transparent", borderLeft: `5px solid ${ba.state === "active" ? "rgba(104,204,140,.5)" : "rgba(255,255,255,.1)"}` }} />
+                    <div style={{ position: "absolute", left: 0, right: 0, top: "50%", height: 1, background: ba.state === "active" ? "var(--ok)" : ba.state === "fault" ? "var(--bad)" : "var(--line-2)", transform: "translateY(-50%)", opacity: .5 }} />
+                    <div style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", width: 0, height: 0, borderTop: "4px solid transparent", borderBottom: "4px solid transparent", borderLeft: `5px solid ${ba.state === "active" ? "var(--ok)" : "var(--line-2)"}` }} />
                     <div style={{ position: "absolute", left: 5, top: 6, fontSize: 8.5, fontFamily: "var(--mono)", color: "var(--ink-4)", background: "var(--panel)", padding: "0 2px", lineHeight: 1 }}>
                       {connType}
                     </div>

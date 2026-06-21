@@ -48,6 +48,15 @@ export default function App() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [railOpen, setRailOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [theme, setTheme] = useState<"light" | "dark">(() =>
+    (localStorage.getItem("to-theme") as "light" | "dark") || "light"
+  );
+
+  const toggleTheme = () => {
+    const next = theme === "light" ? "dark" : "light";
+    setTheme(next);
+    localStorage.setItem("to-theme", next);
+  };
 
   // AssetForm state
   const [assetFormState, setAssetFormState] = useState<{open: boolean; mode: "create" | "edit"; assetTag?: string}>({open:false, mode:"create"});
@@ -148,16 +157,16 @@ export default function App() {
   let lastGroup = "";
 
   return (
-    <div className="testops">
+    <div className="testops" data-theme={theme}>
       <div className="to-app">
         {/* Rail */}
         <aside className={`to-rail ${railOpen ? "show" : ""}`}>
           <div className="to-brand">
             <span>
               <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
-                <rect x="1" y="1" width="28" height="28" rx="8" fill="#141517" stroke="rgba(255,255,255,.10)"/>
-                <path d="M4 16 L9 16 L11.5 9 L15 22 L18 13 L20 16 L26 16" stroke="#828BF5" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-                <circle cx="18" cy="13" r="1.6" fill="#828BF5"/>
+                <rect x="1" y="1" width="28" height="28" rx="8" fill="var(--panel-2)" stroke="var(--line-2)"/>
+                <path d="M4 16 L9 16 L11.5 9 L15 22 L18 13 L20 16 L26 16" stroke="var(--brand)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                <circle cx="18" cy="13" r="1.6" fill="var(--brand)"/>
               </svg>
             </span>
             <div>
@@ -191,7 +200,30 @@ export default function App() {
             <div className="to-who">
               <div className="to-avatar">AK</div>
               <div><div className="nm">A. Kovalenko</div><div className="rl">Test Manager</div></div>
-              <svg style={{marginLeft:"auto",color:"var(--ink-3)"}} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M6 9l6 6 6-6"/></svg>
+              <button
+                onClick={toggleTheme}
+                title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+                style={{
+                  marginLeft: "auto", width: 28, height: 28, borderRadius: 6,
+                  border: "1px solid var(--line-2)", background: "var(--panel-2)",
+                  display: "grid", placeItems: "center",
+                  color: "var(--ink-3)", cursor: "pointer", flexShrink: 0,
+                  transition: "background .1s, color .1s",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--panel-3)"; e.currentTarget.style.color = "var(--ink)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "var(--panel-2)"; e.currentTarget.style.color = "var(--ink-3)"; }}
+              >
+                {theme === "light" ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                  </svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <circle cx="12" cy="12" r="5"/>
+                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                  </svg>
+                )}
+              </button>
             </div>
             <div className="to-spyro">Spyrosoft Group</div>
           </div>
