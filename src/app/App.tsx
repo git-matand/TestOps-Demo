@@ -12,6 +12,7 @@ import { DUTDrawer, AssetDrawer } from "./components/Drawers";
 import { TestBenches } from "./components/TestBenches";
 import { TestCenters } from "./components/TestCenters";
 import { BenchDetail } from "./components/BenchDetail";
+import { AIChat } from "./components/AIChat";
 import { AssetForm } from "./components/AssetForm";
 import { CreateBenchSheet } from "./components/CreateBenchSheet";
 
@@ -45,6 +46,7 @@ export default function App() {
   const [benches, setBenches] = useState<TestBench[]>(BENCHES_INITIAL);
   const [selectedBench, setSelectedBench] = useState<string | null>(null);
   const [selectedCenterId, setSelectedCenterId] = useState<string | null>(null);
+  const [aiChatOpen, setAiChatOpen] = useState(false);
   const [aiAnswer, setAiAnswer] = useState<AIAnswer | null>(null);
   const [drawer, setDrawer] = useState<DrawerState>({open:false, type:null, id:null});
   const [modal, setModal] = useState<ModalState>({open:false, type:null, tags:[]});
@@ -286,10 +288,10 @@ export default function App() {
           </header>
 
           <main className="to-content">
-            {screen === "ops" && <Dashboard onBedClick={id => addToast("Bed "+id,"Opening bed detail…","info")} onGoReports={() => go("reports")} onGoAI={() => go("ai")} onQuery={handleQuery} addToast={addToast} />}
-            {screen === "assets" && <Assets assets={assets} onOpenAsset={openAssetDrawer} onCheckout={openCheckoutModal} onCheckin={openCheckinModal} onRegister={() => setAssetFormState({open:true, mode:"create"})} onDelete={deleteAsset} onClone={cloneAsset} onEdit={tag => setAssetFormState({open:true, mode:"edit", assetTag:tag})} onQuery={handleQuery} addToast={addToast} />}
+            {screen === "ops" && <Dashboard onBedClick={id => addToast("Bed "+id,"Opening bed detail…","info")} onGoReports={() => go("reports")} onGoAI={() => go("ai")} addToast={addToast} />}
+            {screen === "assets" && <Assets assets={assets} onOpenAsset={openAssetDrawer} onCheckout={openCheckoutModal} onCheckin={openCheckinModal} onRegister={() => setAssetFormState({open:true, mode:"create"})} onDelete={deleteAsset} onClone={cloneAsset} onEdit={tag => setAssetFormState({open:true, mode:"edit", assetTag:tag})} addToast={addToast} />}
             {screen === "edge" && <Edge addToast={addToast} />}
-            {screen === "campaigns" && <Campaigns onQuery={handleQuery} addToast={addToast} />}
+            {screen === "campaigns" && <Campaigns addToast={addToast} />}
             {screen === "ai" && <AIInsights answer={aiAnswer} onQuery={handleQuery} onOpenDUT={openDUTDrawer} />}
             {screen === "reports" && <Reports addToast={addToast} />}
             {screen === "admin" && <Admin />}
@@ -311,7 +313,6 @@ export default function App() {
                   benches={visibleBenches}
                   onOpenBench={id => setSelectedBench(id)}
                   onCreateBench={() => setCreateBenchOpen(true)}
-                  onQuery={handleQuery}
                   addToast={addToast}
                 />
               );
@@ -451,6 +452,40 @@ export default function App() {
         }}
         addToast={addToast}
       />
+
+      {/* AI floating button */}
+      <button
+        onClick={() => setAiChatOpen(true)}
+        title="AI Assistant"
+        style={{
+          position: "fixed", bottom: 28, right: 28,
+          width: 52, height: 52, borderRadius: "50%",
+          background: "var(--brand)",
+          color: "#fff",
+          border: "none", cursor: "pointer",
+          boxShadow: "0 4px 20px rgba(94,106,210,.5)",
+          display: "grid", placeItems: "center",
+          zIndex: 700,
+          transition: "transform .15s, box-shadow .15s",
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.transform = "scale(1.08)";
+          e.currentTarget.style.boxShadow = "0 6px 28px rgba(94,106,210,.65)";
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.transform = "";
+          e.currentTarget.style.boxShadow = "0 4px 20px rgba(94,106,210,.5)";
+        }}
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+          <path d="M12 3l1.8 5.4L19 10l-5.2 1.6L12 17l-1.8-5.4L5 10l5.2-1.6z"/>
+          <path d="M19 3l.9 2.7L22 7l-2.1.7L19 10l-.9-2.3L16 7l2.1-.7z" opacity=".6"/>
+          <path d="M5 17l.7 2.1L8 20l-1.7.5L5 22l-.7-1.9L2 19l1.7-.5z" opacity=".5"/>
+        </svg>
+      </button>
+
+      {/* AI Chat panel */}
+      <AIChat open={aiChatOpen} onClose={() => setAiChatOpen(false)} />
 
       {/* Toasts */}
       <div className="to-toasts">

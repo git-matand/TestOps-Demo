@@ -1,15 +1,13 @@
 import { DATA } from "../data";
-import { AIBanner } from "./AIBanner";
 
 interface Props {
   onBedClick: (id: string) => void;
   onGoReports: () => void;
   onGoAI: () => void;
-  onQuery: (q: string) => void;
   addToast: (t: string, s?: string, type?: string) => void;
 }
 
-export function Dashboard({ onBedClick, onGoReports, onGoAI, onQuery, addToast }: Props) {
+export function Dashboard({ onBedClick, onGoReports, onGoAI, addToast }: Props) {
   return (
     <div className="to-screen">
       <div className="to-page-head">
@@ -27,12 +25,6 @@ export function Dashboard({ onBedClick, onGoReports, onGoAI, onQuery, addToast }
         </div>
       </div>
 
-      <AIBanner
-        summary="Bench availability 97.4% (+1.2% MoM) · Bed utilization 73% (+5%) · Integration phase at capacity (86%) · 8 of 12 campaigns active, 4 queued."
-        prediction={{ text: "TB-04 CPU at 89°C with 2 unexpected restarts — 78% failure probability within 14 days. Service before ECU Boot Stress deadline (Jun 19).", level: "bad" }}
-        chips={["What's at risk this week?", "Show underutilized benches", "Where can I cut cost?", "Forecast utilization next month"]}
-        onQuery={onQuery}
-      />
 
       {/* KPIs */}
       <div className="to-grid to-g12" style={{marginBottom:16}}>

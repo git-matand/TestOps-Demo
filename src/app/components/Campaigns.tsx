@@ -1,8 +1,6 @@
 import { DATA } from "../data";
-import { AIBanner } from "./AIBanner";
 
 interface Props {
-  onQuery: (q: string) => void;
   addToast: (t: string, s?: string, type?: string) => void;
 }
 
@@ -19,7 +17,7 @@ const RESOURCES: [string, number[]][] = [
   ["DUT-22 (HiL)",[1,1,0,1,1,0,0]],["K. Nowak",[0,1,1,1,0,0,0]],["S. Marek",[1,1,1,0,0,1,0]],
 ];
 
-export function Campaigns({ onQuery, addToast }: Props) {
+export function Campaigns({ addToast }: Props) {
   return (
     <div className="to-screen">
       <div className="to-page-head">
@@ -41,12 +39,6 @@ export function Campaigns({ onQuery, addToast }: Props) {
         </div>
       </div>
 
-      <AIBanner
-        summary="8 active campaigns · 4 queued · 1 at risk. CAN-Stack Regression at 78% on track. ECU Boot Stress at 91% — nearly done. Integration phase running at peak capacity."
-        prediction={{ text: "CMP-221 (ADAS Sensor Fusion v1) is queued behind TB-09 maintenance — likely to miss Jun 22 start if bed isn't returned a day early.", level: "bad" }}
-        chips={["Which campaigns are at risk this week?", "Forecast utilization for next month", "Where can I cut cost?", "Show DUTs with uptime < 90% this quarter"]}
-        onQuery={onQuery}
-      />
 
       <div className="to-kanban">
         {COLS.map(col => (

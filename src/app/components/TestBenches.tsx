@@ -1,12 +1,10 @@
 import { useState } from "react";
 import { TestBench } from "../data";
-import { AIBanner } from "./AIBanner";
 
 interface Props {
   benches: TestBench[];
   onOpenBench: (id: string) => void;
   onCreateBench: () => void;
-  onQuery: (q: string) => void;
   addToast: (t: string, s?: string, type?: string) => void;
 }
 
@@ -80,7 +78,7 @@ function BenchTile({ b, onClick }: { b: TestBench; onClick: () => void }) {
 
 const STATUS_FILTERS = ["All", "Up", "Down", "Degraded", "Maintenance"] as const;
 
-export function TestBenches({ benches, onOpenBench, onCreateBench, onQuery, addToast }: Props) {
+export function TestBenches({ benches, onOpenBench, onCreateBench, addToast }: Props) {
   const [view, setView] = useState<"heatmap" | "table">("heatmap");
   const [statusFilter, setStatusFilter] = useState("All");
   const [search, setSearch] = useState("");
@@ -117,12 +115,6 @@ export function TestBenches({ benches, onOpenBench, onCreateBench, onQuery, addT
         </div>
       </div>
 
-      <AIBanner
-        summary={`${benches.length} benches total · ${benches.filter(b=>b.status==="Up").length} Up · ${benches.filter(b=>b.status==="Down").length} Down · ${benches.filter(b=>b.status==="Degraded").length} Degraded · ${benches.filter(b=>b.status==="Maintenance").length} Maintenance. ${benches.filter(b=>b.coredumps.length>0).length} benches with coredumps detected.`}
-        prediction={{ text: "TB-146 disk at 99% with 2 coredumps — risk of unrecoverable state before next campaign run. TB-022 went down 9 min ago with LIN coredump.", level: "bad" }}
-        chips={["Which benches need attention?", "Show high CPU benches", "Predict next failure", "Which campaigns are at risk?"]}
-        onQuery={onQuery}
-      />
 
       {/* KPI cards */}
       <div className="to-grid to-g12" style={{ marginBottom: 20 }}>

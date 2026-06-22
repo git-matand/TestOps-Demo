@@ -2,8 +2,6 @@ import { useState } from "react";
 import { Asset, DATA, STATUS_MAP } from "../data";
 import { SyncModal } from "./SyncModal";
 import { ScanModal } from "./QRModal";
-import { AIBanner } from "./AIBanner";
-
 interface Props {
   assets: Asset[];
   onOpenAsset: (tag: string) => void;
@@ -13,7 +11,6 @@ interface Props {
   onDelete: (tag: string) => void;
   onClone: (tag: string) => void;
   onEdit?: (tag: string) => void;
-  onQuery: (q: string) => void;
   addToast: (t: string, s?: string, type?: string) => void;
 }
 
@@ -25,7 +22,7 @@ const PEN = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="
 const COPY = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V4h12"/></svg>;
 const TRASH = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>;
 
-export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister, onDelete, onClone, onEdit, onQuery, addToast }: Props) {
+export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister, onDelete, onClone, onEdit, addToast }: Props) {
   const [tab, setTab] = useState("registry");
   const [filter, setFilter] = useState("all");
   const [sel, setSel] = useState<Set<string>>(new Set());
@@ -75,12 +72,6 @@ export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister,
         </div>
       </div>
 
-      <AIBanner
-        summary={`${assets.length} assets in inventory · ${assets.filter(a=>a.status==="deployed").length} deployed · ${assets.filter(a=>a.status==="ready").length} ready to deploy · ${assets.filter(a=>a.audit?.due).length} due for audit · ${assets.filter(a=>a.status==="investigating").length} under investigation.`}
-        prediction={{ text: "Asset #00095 warranty expires Jul 1 and is currently under investigation — plan replacement before it blocks a campaign.", level: "warn" }}
-        chips={["Show overdue audits", "Which assets are unassigned?", "Show DUTs with uptime < 90% this quarter", "Where can I cut cost?"]}
-        onQuery={onQuery}
-      />
 
       <div className="to-tabs">
         {TABS.map(([k,l]) => (
