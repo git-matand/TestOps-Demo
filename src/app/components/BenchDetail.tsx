@@ -98,11 +98,6 @@ export function BenchDetail({ bench, assets, onBack, onOpenAsset, onEdit, addToa
     <div className="to-screen" style={{ padding: 0 }}>
       {/* Sticky detail header */}
       <div className="to-bench-detail-header">
-        <div className="breadcrumb">
-          <button className="to-linklike" onClick={onBack} style={{ fontSize: 12 }}>Test Benches</button>
-          {" › "}
-          <b>{bench.name}</b>
-        </div>
         <div className="to-row to-between" style={{ flexWrap: "wrap", gap: 12, alignItems: "flex-start" }}>
           <div>
             <div className="to-row" style={{ gap: 10, alignItems: "baseline" }}>
