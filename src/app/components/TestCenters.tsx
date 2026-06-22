@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { TestCenter, TestBench, ASSETS_INITIAL } from "../data";
+import { MapView } from "./MapView";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Props {
@@ -746,11 +747,42 @@ function TeamsTab({ team }: { team: typeof TEAMS[string] }) {
   );
 }
 
+// ─── View toggle ──────────────────────────────────────────────────────────────
+function ViewToggle({ view, onChange }: { view: "grid" | "map"; onChange: (v: "grid" | "map") => void }) {
+  const btn = (v: "grid" | "map", icon: string, label: string) => (
+    <button
+      onClick={() => onChange(v)}
+      style={{
+        display: "flex", alignItems: "center", gap: 5,
+        padding: "5px 11px", borderRadius: 6, border: "none",
+        background: view === v ? "var(--panel)" : "transparent",
+        boxShadow: view === v ? "0 1px 4px rgba(0,0,0,.1)" : "none",
+        color: view === v ? "var(--ink)" : "var(--ink-3)",
+        fontSize: 12.5, fontWeight: 500, cursor: "pointer",
+        transition: "background .12s, color .12s",
+      }}
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" dangerouslySetInnerHTML={{ __html: icon }} />
+      {label}
+    </button>
+  );
+  return (
+    <div style={{
+      display: "flex", background: "var(--panel-2)", borderRadius: 8,
+      border: "1px solid var(--line-2)", padding: 2, gap: 1,
+    }}>
+      {btn("grid", '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>', "Grid")}
+      {btn("map", '<circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 1 8 8c0 5.25-8 14-8 14S4 15.25 4 10a8 8 0 0 1 8-8z"/>', "Map")}
+    </div>
+  );
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 export function TestCenters({ centers, benches, onOpenCenter }: Props) {
   const [selected, setSelected]  = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [newCenters, setNewCenters] = useState<TestCenter[]>([]);
+  const [view, setView]            = useState<"grid" | "map">("grid");
 
   const allCenters = [...centers, ...newCenters];
 
@@ -781,6 +813,7 @@ export function TestCenters({ centers, benches, onOpenCenter }: Props) {
           </div>
         </div>
         <div className="to-head-actions">
+          <ViewToggle view={view} onChange={setView} />
           <button className="to-btn primary sm" onClick={() => setModalOpen(true)}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
             New Center
@@ -788,7 +821,17 @@ export function TestCenters({ centers, benches, onOpenCenter }: Props) {
         </div>
       </div>
 
+      {/* Map view */}
+      {view === "map" && (
+        <MapView
+          centers={allCenters}
+          benches={benches}
+          onSelect={id => setSelected(id)}
+        />
+      )}
+
       {/* Cards grid */}
+      {view === "grid" && (
       <div className="to-grid to-g12">
         {allCenters.map(c => (
           <CenterCard
@@ -799,6 +842,7 @@ export function TestCenters({ centers, benches, onOpenCenter }: Props) {
           />
         ))}
       </div>
+      )}
 
       {/* New Center Modal */}
       {modalOpen && (
