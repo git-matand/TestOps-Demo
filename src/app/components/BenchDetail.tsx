@@ -824,8 +824,7 @@ function WiringDiagram({ bench, assets }: { bench: TestBench; assets: Asset[] })
                     style={{
                       flex: 1, minWidth: 0,
                       background: isOpen ? "var(--panel-3)" : "var(--panel-2)",
-                      border: `1px solid ${isOpen ? stateColor : "var(--line)"}`,
-                      borderLeft: `3px solid ${stateColor}`,
+                      border: "1px solid var(--line-2)",
                       borderRadius: isOpen ? "8px 8px 0 0" : 8,
                       padding: "8px 12px",
                       cursor: "pointer",

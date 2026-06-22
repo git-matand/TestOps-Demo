@@ -7,8 +7,8 @@
 /* ─── Dark theme (opt-in) ─────────────────────────────────────────────────── */
 .testops[data-theme="dark"] {
   --bg:#08090A; --bg-2:#0B0C0E; --panel:#0E0F11; --panel-2:#141517; --panel-3:#1B1C1F;
-  --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.11);
-  --ink:#F7F8F8; --ink-2:#8A8F98; --ink-3:#62666D; --ink-4:#42454B;
+  --line:rgba(255,255,255,.10); --line-2:rgba(255,255,255,.17);
+  --ink:#F7F8F8; --ink-2:#8A8F98; --ink-3:#7B8190; --ink-4:#6E7585;
   --brand:#828BF5; --brand-2:#A2A9F8; --brand-3:#C3C8FB;
   --brand-cta:#5E6AD2; --brand-dim:rgba(94,106,210,.16); --brand-glow:rgba(94,106,210,.30);
   --accent:#FC7840; --accent-2:#FF9466; --accent-dim:rgba(252,120,64,.15);
@@ -26,7 +26,7 @@
 /* ─── Light theme (default) ──────────────────────────────────────────────── */
 .testops {
   --bg:#F5F6F8; --bg-2:#ECEEF2; --panel:#FFFFFF; --panel-2:#F0F2F5; --panel-3:#E4E7EC;
-  --line:rgba(0,0,0,.08); --line-2:rgba(0,0,0,.12);
+  --line:rgba(0,0,0,.09); --line-2:rgba(0,0,0,.17);
   --ink:#111318; --ink-2:#3D4252; --ink-3:#525A6B; --ink-4:#6B7280;
   --brand:#5E6AD2; --brand-2:#4A55C0; --brand-3:#3A44A8;
   --brand-cta:#5E6AD2; --brand-dim:rgba(94,106,210,.10); --brand-glow:rgba(94,106,210,.20);
@@ -130,7 +130,7 @@
 .to-btn.sm{height:28px;padding:0 10px;font-size:12.5px}
 
 /* panels */
-.to-panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--hl)}
+.to-panel{background:var(--panel);border:1px solid var(--line-2);border-radius:var(--r);box-shadow:var(--hl)}
 .to-panel-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line)}
 .to-panel-h h3{margin:0;font-size:13px;font-weight:600;font-family:var(--ui);letter-spacing:-.01em}
 .to-eyebrow{font-family:var(--ui);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);font-weight:510}

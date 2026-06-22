@@ -132,8 +132,7 @@ function CenterCard({
         onClick={onClick}
         style={{
           background: "var(--panel)", borderRadius: 12,
-          border: "1px solid var(--line)",
-          borderLeft: `3px solid ${st.color}`,
+          border: "1px solid var(--line-2)",
           cursor: "pointer", overflow: "hidden",
           transition: "box-shadow .15s, transform .15s",
         }}
@@ -348,8 +347,8 @@ function DetailView({ center, benches, onBack }: {
 
       {/* Hero header */}
       <div style={{
-        background: "var(--panel)", borderRadius: 12, border: "1px solid var(--line)",
-        borderLeft: `3px solid ${st.color}`, padding: "20px 24px", marginBottom: 20,
+        background: "var(--panel)", borderRadius: 12, border: "1px solid var(--line-2)",
+        padding: "20px 24px", marginBottom: 20,
       }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
           <div style={{

@@ -87,8 +87,7 @@ function TeamCard({ team, onEdit }: { team: Team; onEdit: () => void }) {
 
   return (
     <div style={{
-      background:"var(--panel)", borderRadius:12, border:"1px solid var(--line)",
-      borderLeft:`3px solid ${c.border}`,
+      background:"var(--panel)", borderRadius:12, border:"1px solid var(--line-2)",
       display:"flex", flexDirection:"column",
     }}>
       {/* Header */}

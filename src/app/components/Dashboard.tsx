@@ -167,8 +167,8 @@ function CenterPill({
         <span style={{
           fontSize: 10, padding: "0 5px", borderRadius: 8, minWidth: 18,
           textAlign: "center", lineHeight: "18px", display: "inline-block",
-          background: active ? "rgba(94,106,210,.2)" : "var(--panel-3)",
-          color: active ? "var(--brand)" : "var(--ink-4)",
+          background: active ? "var(--brand-dim)" : "var(--panel-3)",
+          color: active ? "var(--brand)" : "var(--ink-2)",
         }}>
           {count}
         </span>
@@ -197,8 +197,7 @@ function IssueCard({ issue, onAct }: { issue: Issue; onAct: () => void }) {
       display: "flex", alignItems: "flex-start", gap: 10,
       padding: "10px 12px", borderRadius: 8,
       background: s.bg,
-      border: `1px solid ${s.border}25`,
-      borderLeft: `3px solid ${s.border}`,
+      border: `1px solid ${s.border}30`,
     }}>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
         stroke={s.border} strokeWidth="1.8"
@@ -309,7 +308,7 @@ export function Dashboard({ onBedClick, onGoReports, addToast, role = "engineer"
 
       {/* ── Needs Attention ──────────────────────────────────────────────── */}
       {issues.length > 0 && (
-        <div className="to-panel" style={{ marginBottom: 20, borderLeft: "3px solid var(--bad)" }}>
+        <div className="to-panel" style={{ marginBottom: 20 }}>
           <div className="to-panel-h">
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--bad)" strokeWidth="2">
