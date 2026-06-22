@@ -538,3 +538,36 @@ export const BENCHES_INITIAL: TestBench[] = [
     coredumps: [],
   },
 ];
+
+export interface TestCenter {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  country: string;
+  lat: number;
+  lng: number;
+  benchIds: string[];
+  assetTags: string[];
+}
+
+export const TEST_CENTERS: TestCenter[] = [
+  {
+    id: "TC-MUC", name: "Munich HiL Lab", address: "Petuelring 130", city: "Munich", country: "Germany",
+    lat: 48.177, lng: 11.556,
+    benchIds: ["TB-178", "TB-205", "TB-038", "TB-047", "TB-093", "TB-071"],
+    assetTags: ["00522", "00240", "00197", "00517", "00516", "00524", "00510", "00527"],
+  },
+  {
+    id: "TC-STR", name: "Stuttgart Integration Center", address: "Epplestraße 225", city: "Stuttgart", country: "Germany",
+    lat: 48.740, lng: 9.190,
+    benchIds: ["TB-146", "TB-112", "TB-156", "TB-014", "TB-055", "TB-199"],
+    assetTags: ["00499", "00500", "00095", "00518", "00502"],
+  },
+  {
+    id: "TC-WAW", name: "Warsaw Test Farm", address: "ul. Wołoska 9", city: "Warsaw", country: "Poland",
+    lat: 52.186, lng: 21.001,
+    benchIds: ["TB-084", "TB-231", "TB-067", "TB-033", "TB-022", "TB-088", "TB-102"],
+    assetTags: ["00478", "00466", "00506"],
+  },
+];

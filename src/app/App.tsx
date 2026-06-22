@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Asset, ASSETS_INITIAL, DATA, TestBench, BENCHES_INITIAL } from "./data";
+import { Asset, ASSETS_INITIAL, DATA, TestBench, BENCHES_INITIAL, TEST_CENTERS } from "./data";
 import { Dashboard } from "./components/Dashboard";
 import { Assets } from "./components/Assets";
 import { Edge } from "./components/Edge";
@@ -10,11 +10,12 @@ import { Admin } from "./components/Admin";
 import { Roadmap } from "./components/Roadmap";
 import { DUTDrawer, AssetDrawer } from "./components/Drawers";
 import { TestBenches } from "./components/TestBenches";
+import { TestCenters } from "./components/TestCenters";
 import { BenchDetail } from "./components/BenchDetail";
 import { AssetForm } from "./components/AssetForm";
 import { CreateBenchSheet } from "./components/CreateBenchSheet";
 
-type Screen = "ops" | "assets" | "edge" | "campaigns" | "ai" | "reports" | "admin" | "roadmap" | "benches";
+type Screen = "ops" | "assets" | "edge" | "campaigns" | "ai" | "reports" | "admin" | "roadmap" | "benches" | "centers";
 
 interface ToastItem { id: number; title: string; subtitle?: string; type?: string }
 interface DrawerState { open: boolean; type: "dut" | "asset" | null; id: string | null }
@@ -24,11 +25,12 @@ interface AIAnswer { q: string; summary: string; rows?: typeof DATA.duts }
 const TITLES: Record<Screen, string> = {
   ops:"Live Dashboard", assets:"Assets", edge:"Edge & Telemetry", campaigns:"Campaigns",
   ai:"AI Insights", reports:"Reports", admin:"Users & Audit", roadmap:"Future modules",
-  benches:"Test Benches",
+  benches:"Test Benches", centers:"Test Centers",
 };
 
 const NAV: { screen: Screen; label: string; icon: string; group: string; soon?: boolean; badge?: string }[] = [
   {group:"Operate", screen:"ops", label:"Live Dashboard", icon:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'},
+  {group:"", screen:"centers", label:"Test Centers", icon:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>'},
   {group:"", screen:"benches", label:"Test Benches", icon:'<rect x="2" y="3" width="20" height="5" rx="1.5"/><rect x="2" y="10" width="20" height="5" rx="1.5"/><rect x="2" y="17" width="20" height="4" rx="1.5"/><circle cx="18" cy="5.5" r="1.2" fill="currentColor"/><circle cx="18" cy="12.5" r="1.2" fill="currentColor"/>'},
   {group:"", screen:"assets", label:"Assets", icon:'<rect x="3" y="4" width="18" height="5" rx="1.5"/><rect x="3" y="10" width="18" height="5" rx="1.5"/><rect x="3" y="16" width="18" height="4" rx="1.5"/><circle cx="7" cy="6.5" r="1" fill="currentColor"/><circle cx="7" cy="12.5" r="1" fill="currentColor"/>'},
   {group:"", screen:"campaigns", label:"Campaigns", icon:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>'},
@@ -42,6 +44,7 @@ export default function App() {
   const [assets, setAssets] = useState<Asset[]>(ASSETS_INITIAL);
   const [benches, setBenches] = useState<TestBench[]>(BENCHES_INITIAL);
   const [selectedBench, setSelectedBench] = useState<string | null>(null);
+  const [selectedCenterId, setSelectedCenterId] = useState<string | null>(null);
   const [aiAnswer, setAiAnswer] = useState<AIAnswer | null>(null);
   const [drawer, setDrawer] = useState<DrawerState>({open:false, type:null, id:null});
   const [modal, setModal] = useState<ModalState>({open:false, type:null, tags:[]});
@@ -79,7 +82,16 @@ export default function App() {
   const go = (s: Screen) => {
     if (s !== "ai") setAiAnswer(null);
     if (s !== "benches") setSelectedBench(null);
+    setSelectedCenterId(null);
     setScreen(s);
+    setRailOpen(false);
+    window.scrollTo(0,0);
+  };
+
+  const openCenter = (centerId: string) => {
+    setSelectedCenterId(centerId);
+    setSelectedBench(null);
+    setScreen("benches");
     setRailOpen(false);
     window.scrollTo(0,0);
   };
@@ -238,8 +250,21 @@ export default function App() {
             <div className="to-crumbs">
               {screen === "benches" && selectedBench ? (
                 <>
-                  <button className="to-linklike" style={{fontSize:13}} onClick={() => setSelectedBench(null)}>Test Benches</button>
-                  <span style={{color:"var(--ink-3)",margin:"0 6px"}}>/</span>
+                  {selectedCenterId ? (
+                    <>
+                      <button className="to-linklike" style={{fontSize:13}} onClick={() => { setSelectedCenterId(null); setSelectedBench(null); setScreen("centers"); }}>Test Centers</button>
+                      <span style={{color:"var(--ink-3)",margin:"0 6px"}}>/</span>
+                      <button className="to-linklike" style={{fontSize:13}} onClick={() => setSelectedBench(null)}>
+                        {TEST_CENTERS.find(c => c.id === selectedCenterId)?.name || selectedCenterId}
+                      </button>
+                      <span style={{color:"var(--ink-3)",margin:"0 6px"}}>/</span>
+                    </>
+                  ) : (
+                    <>
+                      <button className="to-linklike" style={{fontSize:13}} onClick={() => setSelectedBench(null)}>Test Benches</button>
+                      <span style={{color:"var(--ink-3)",margin:"0 6px"}}>/</span>
+                    </>
+                  )}
                   <b>{benches.find(b => b.id === selectedBench)?.name || selectedBench}</b>
                 </>
               ) : (
@@ -269,15 +294,28 @@ export default function App() {
             {screen === "reports" && <Reports addToast={addToast} />}
             {screen === "admin" && <Admin />}
             {screen === "roadmap" && <Roadmap />}
-            {screen === "benches" && selectedBench === null && (
-              <TestBenches
+            {screen === "centers" && (
+              <TestCenters
+                centers={TEST_CENTERS}
                 benches={benches}
-                onOpenBench={id => setSelectedBench(id)}
-                onCreateBench={() => setCreateBenchOpen(true)}
-                onQuery={handleQuery}
-                addToast={addToast}
+                onOpenCenter={openCenter}
               />
             )}
+            {screen === "benches" && selectedBench === null && (() => {
+              const centerFilter = selectedCenterId ? TEST_CENTERS.find(c => c.id === selectedCenterId) : null;
+              const visibleBenches = centerFilter
+                ? benches.filter(b => centerFilter.benchIds.includes(b.id))
+                : benches;
+              return (
+                <TestBenches
+                  benches={visibleBenches}
+                  onOpenBench={id => setSelectedBench(id)}
+                  onCreateBench={() => setCreateBenchOpen(true)}
+                  onQuery={handleQuery}
+                  addToast={addToast}
+                />
+              );
+            })()}
             {screen === "benches" && selectedBench !== null && (() => {
               const bench = benches.find(b => b.id === selectedBench);
               if (!bench) return <div className="to-screen"><div style={{color:"var(--bad)"}}>Bench not found</div></div>;
