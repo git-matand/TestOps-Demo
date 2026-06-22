@@ -20,6 +20,8 @@ interface Issue {
   id: string;
   title: string;
   detail: string;
+  benchId?: string;
+  centerName?: string;
 }
 
 // ─── Per-center stubs for KPIs that can't be derived from bench IDs ──────────
@@ -63,6 +65,19 @@ function computeKpis(sel: string[]) {
 }
 
 // ─── Issue computation ────────────────────────────────────────────────────────
+function findCenterCity(benchId: string): string | undefined {
+  const c = TEST_CENTERS.find(c => c.benchIds.includes(benchId));
+  if (c) return c.city;
+  // Heatmap bench IDs (TB-01..TB-19) mapped by range
+  const n = parseInt(benchId.replace("TB-", ""), 10);
+  if (!isNaN(n)) {
+    if (n <= 6)  return "Munich";
+    if (n <= 12) return "Stuttgart";
+    if (n <= 19) return "Warsaw";
+  }
+  return undefined;
+}
+
 function computeIssues(sel: string[]): Issue[] {
   const isAll = sel.includes("all");
 
@@ -82,6 +97,7 @@ function computeIssues(sel: string[]): Issue[] {
     sev: "critical", kind: "bench", id: b.id,
     title: `${b.id} is offline`,
     detail: `${b.name} · last seen ${b.telemetry.lastSeen ?? "unknown"}`,
+    benchId: b.id, centerName: findCenterCity(b.id),
   }));
 
   // Disk > 90 %
@@ -91,6 +107,7 @@ function computeIssues(sel: string[]): Issue[] {
       sev: "critical", kind: "bench", id: b.id + "-disk",
       title: `Disk critical on ${b.id}`,
       detail: `${hit.mount} at ${hit.usePct}% — ${hit.used} / ${hit.size}`,
+      benchId: b.id, centerName: findCenterCity(b.id),
     });
   });
 
@@ -99,6 +116,7 @@ function computeIssues(sel: string[]): Issue[] {
     sev: "critical", kind: "dut", id: d.id,
     title: `Thermal alert: ${d.id}`,
     detail: `${d.name} · ${d.temp}°C on ${d.bed}`,
+    benchId: d.bed, centerName: findCenterCity(d.bed),
   }));
 
   // Degraded DUTs (not already hot)
@@ -106,6 +124,7 @@ function computeIssues(sel: string[]): Issue[] {
     sev: "warning", kind: "dut", id: d.id,
     title: `${d.id} degraded`,
     detail: `${d.name} · ${d.statusLabel} on ${d.bed}`,
+    benchId: d.bed, centerName: findCenterCity(d.bed),
   }));
 
   // Calibration overdue
@@ -115,6 +134,7 @@ function computeIssues(sel: string[]): Issue[] {
       sev: "warning", kind: "dut", id: d.id + "-cal",
       title: `${d.id} calibration overdue`,
       detail: `${d.name} · due ${d.cal}`,
+      benchId: d.bed, centerName: findCenterCity(d.bed),
     }));
 
   // Assets investigating (scoped by center)
@@ -190,7 +210,7 @@ const KIND_PATH: Record<IssueKind, string> = {
   campaign: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/>',
 };
 
-function IssueCard({ issue, onAct }: { issue: Issue; onAct: () => void }) {
+function IssueCard({ issue, onAct, onView }: { issue: Issue; onAct: () => void; onView?: () => void }) {
   const s = SEV[issue.sev];
   return (
     <div style={{
@@ -201,19 +221,30 @@ function IssueCard({ issue, onAct }: { issue: Issue; onAct: () => void }) {
     }}>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
         stroke={s.border} strokeWidth="1.8"
-        style={{ flexShrink: 0, marginTop: 1 }}
+        style={{ flexShrink: 0, marginTop: 2 }}
         dangerouslySetInnerHTML={{ __html: KIND_PATH[issue.kind] }} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink)", lineHeight: 1.3 }}>
-          {issue.title}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 2 }}>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink)", lineHeight: 1.3 }}>
+            {issue.title}
+          </span>
+          {issue.centerName && (
+            <span style={{
+              fontSize: 10, padding: "1px 6px", borderRadius: 4, flexShrink: 0,
+              background: "var(--panel-3)", color: "var(--ink-3)", fontWeight: 500,
+            }}>
+              {issue.centerName}
+            </span>
+          )}
         </div>
-        <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 2 }}>{issue.detail}</div>
+        <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{issue.detail}</div>
       </div>
       <button
-        onClick={onAct}
+        onClick={onView ?? onAct}
         style={{
           flexShrink: 0, fontSize: 11, color: s.border, fontWeight: 600,
           background: "none", border: "none", cursor: "pointer", padding: "0 2px",
+          whiteSpace: "nowrap",
         }}
       >
         View →
@@ -328,6 +359,7 @@ export function Dashboard({ onBedClick, onGoReports, addToast, role = "engineer"
                 <IssueCard
                   key={`${iss.kind}-${iss.id}`}
                   issue={iss}
+                  onView={iss.benchId ? () => onBedClick(iss.benchId!) : undefined}
                   onAct={() => addToast(iss.id, iss.detail, iss.sev === "critical" ? "error" : "warn")}
                 />
               ))}

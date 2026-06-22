@@ -333,7 +333,7 @@ export default function App() {
           </header>
 
           <main className="to-content">
-            {screen === "ops" && <Dashboard onBedClick={id => addToast("Bed "+id,"Opening bed detail…","info")} onGoReports={() => go("reports")} onGoAI={() => go("ai")} addToast={addToast} role={currentRole} />}
+            {screen === "ops" && <Dashboard onBedClick={id => { setSelectedBench(id); setScreen("benches"); }} onGoReports={() => go("reports")} onGoAI={() => go("ai")} addToast={addToast} role={currentRole} />}
             {screen === "assets" && <Assets assets={assets} onOpenAsset={openAssetDrawer} onCheckout={openCheckoutModal} onCheckin={openCheckinModal} onRegister={() => setAssetFormState({open:true, mode:"create"})} onDelete={deleteAsset} onClone={cloneAsset} onEdit={tag => setAssetFormState({open:true, mode:"edit", assetTag:tag})} addToast={addToast} />}
             {screen === "edge" && <Edge addToast={addToast} />}
             {screen === "campaigns" && <Campaigns addToast={addToast} />}

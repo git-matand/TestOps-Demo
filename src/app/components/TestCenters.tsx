@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TestCenter, TestBench, ASSETS_INITIAL } from "../data";
+import { TestCenter, TestBench, ASSETS_INITIAL, BENCHES_INITIAL, TEST_CENTERS as ALL_CENTERS } from "../data";
 import { MapView } from "./MapView";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -13,6 +13,7 @@ type DetailTab = "overview" | "benches" | "assets" | "teams";
 
 interface NewCenterDraft {
   name: string; city: string; country: string; address: string;
+  benchIds: string[]; assetTags: string[]; personIds: string[];
 }
 
 // ─── Static mock enrichments ──────────────────────────────────────────────────
@@ -224,76 +225,267 @@ function CenterCard({
   );
 }
 
-// ─── New Center Modal ─────────────────────────────────────────────────────────
+// ─── New Center Modal — 4-step wizard ─────────────────────────────────────────
+const MODAL_ENGINEERS = [
+  { id:"E1", initials:"AK", name:"Andriy Kovalenko",  role:"Test Manager",    avail:"Available" as const },
+  { id:"E2", initials:"SM", name:"Stefan Marek",       role:"Senior Engineer", avail:"Busy"      as const },
+  { id:"E3", initials:"LW", name:"Lidia Wójcik",       role:"Tester",          avail:"Available" as const },
+  { id:"E4", initials:"KN", name:"Kamil Nowak",        role:"DevOps Engineer", avail:"Available" as const },
+  { id:"E5", initials:"PB", name:"Piotr Bakun",        role:"Engineer",        avail:"On Leave"  as const },
+  { id:"E6", initials:"WP", name:"Wojciech Pikulski",  role:"RF Engineer",     avail:"Busy"      as const },
+];
+const AVAIL_C = { Available:"var(--ok)", Busy:"var(--warn)", "On Leave":"var(--ink-4)" } as const;
+const WIZARD_STEPS = ["Location", "Benches", "Assets", "Team"] as const;
+
+function SearchInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
+  return (
+    <div style={{ position:"relative", marginBottom:8 }}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+        style={{ position:"absolute", left:9, top:"50%", transform:"translateY(-50%)", color:"var(--ink-3)", pointerEvents:"none" }}>
+        <circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>
+      </svg>
+      <input
+        value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+        style={{ width:"100%", height:32, borderRadius:6, border:"1px solid var(--line-2)", background:"var(--panel-2)", color:"var(--ink)", fontSize:13, padding:"0 10px 0 30px", boxSizing:"border-box" }}
+      />
+    </div>
+  );
+}
+
+function AssignRow({ checked, disabled, onToggle, left, right, badge }: {
+  checked: boolean; disabled?: boolean; onToggle: () => void;
+  left: [string, string]; right?: string; badge?: string;
+}) {
+  return (
+    <label style={{
+      display:"flex", alignItems:"center", gap:10, padding:"9px 12px", borderRadius:8,
+      border:`1px solid ${checked ? "var(--brand)" : "var(--line-2)"}`,
+      background: checked ? "var(--brand-dim)" : "var(--panel-2)",
+      cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.55 : 1, transition:"all .1s",
+    }}>
+      <input type="checkbox" checked={checked} disabled={disabled} onChange={onToggle}
+        style={{ accentColor:"var(--brand)", width:15, height:15, flexShrink:0 }} />
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ fontSize:13, fontWeight:550, color:"var(--ink)" }}>{left[0]}</div>
+        <div style={{ fontSize:11, color:"var(--ink-3)" }}>{left[1]}</div>
+      </div>
+      {badge && <span style={{ fontSize:10, padding:"1px 6px", borderRadius:4, background:"var(--panel-3)", color:"var(--ink-3)", fontWeight:500, whiteSpace:"nowrap" }}>{badge}</span>}
+      {right && <span style={{ fontSize:11, fontWeight:500, color:"var(--ink-3)", whiteSpace:"nowrap" }}>{right}</span>}
+    </label>
+  );
+}
+
 function NewCenterModal({ onClose, onCreate }: {
   onClose: () => void;
   onCreate: (d: NewCenterDraft) => void;
 }) {
-  const [form, setForm] = useState<NewCenterDraft>({ name: "", city: "", country: "Germany", address: "" });
-  const valid = form.name.trim() && form.city.trim();
+  const [step, setStep]           = useState(1);
+  const [name, setName]           = useState("");
+  const [city, setCity]           = useState("");
+  const [country, setCountry]     = useState("Germany");
+  const [address, setAddress]     = useState("");
+  const [selBenches, setSelB]     = useState<string[]>([]);
+  const [selAssets,  setSelA]     = useState<string[]>([]);
+  const [selPeople,  setSelP]     = useState<string[]>([]);
+  const [searchB, setSearchB]     = useState("");
+  const [searchA, setSearchA]     = useState("");
+  const [searchP, setSearchP]     = useState("");
 
-  const set = (k: keyof NewCenterDraft, v: string) => setForm(p => ({ ...p, [k]: v }));
+  const valid1 = name.trim() && city.trim();
+  const benchCenterName = (id: string) => ALL_CENTERS.find(c => c.benchIds.includes(id))?.city;
+
+  const toggleB = (id: string) => setSelB(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
+  const toggleA = (t: string)  => setSelA(p => p.includes(t)  ? p.filter(x => x !== t)  : [...p, t]);
+  const toggleP = (id: string) => setSelP(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
+
+  function handleCreate() {
+    if (!valid1) return;
+    onCreate({ name, city, country, address, benchIds: selBenches, assetTags: selAssets, personIds: selPeople });
+  }
+
+  const benchList = BENCHES_INITIAL.filter(b =>
+    b.id.toLowerCase().includes(searchB.toLowerCase()) ||
+    b.name.toLowerCase().includes(searchB.toLowerCase())
+  );
+  const assetList = ASSETS_INITIAL.filter(a =>
+    a.tag.includes(searchA) ||
+    (a.model ?? "").toLowerCase().includes(searchA.toLowerCase()) ||
+    (a.cat  ?? "").toLowerCase().includes(searchA.toLowerCase())
+  );
+  const peopleList = MODAL_ENGINEERS.filter(e =>
+    e.name.toLowerCase().includes(searchP.toLowerCase()) ||
+    e.role.toLowerCase().includes(searchP.toLowerCase())
+  );
 
   return (
-    <div
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.35)", display: "grid", placeItems: "center", zIndex: 1000 }}
-      onClick={e => e.target === e.currentTarget && onClose()}
-    >
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.4)", display:"grid", placeItems:"center", zIndex:1000 }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={{
-        background: "var(--panel)", borderRadius: 14, width: 480, maxWidth: "95vw",
-        boxShadow: "0 24px 64px rgba(0,0,0,.28)",
-        border: "1px solid var(--line-2)",
+        background:"var(--panel)", borderRadius:14, width:520, maxWidth:"95vw",
+        maxHeight:"88vh", display:"flex", flexDirection:"column",
+        boxShadow:"0 24px 64px rgba(0,0,0,.28)", border:"1px solid var(--line-2)",
       }}>
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 22px 14px", borderBottom: "1px solid var(--line)" }}>
-          <div>
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 660, color: "var(--ink)" }}>New Test Center</h3>
-            <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 2 }}>Add a new physical test lab location</div>
+        {/* Header + stepper */}
+        <div style={{ padding:"18px 22px 14px", borderBottom:"1px solid var(--line)" }}>
+          <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:14 }}>
+            <div>
+              <h3 style={{ margin:0, fontSize:16, fontWeight:660, color:"var(--ink)" }}>New Test Center</h3>
+              <div style={{ fontSize:12, color:"var(--ink-3)", marginTop:2 }}>
+                Step {step} of 4 — {WIZARD_STEPS[step - 1]}
+              </div>
+            </div>
+            <button onClick={onClose} style={{ width:28, height:28, borderRadius:6, border:"1px solid var(--line-2)", background:"var(--panel-2)", display:"grid", placeItems:"center", color:"var(--ink-3)", cursor:"pointer", flexShrink:0 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
           </div>
-          <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid var(--line-2)", background: "var(--panel-2)", display: "grid", placeItems: "center", color: "var(--ink-3)", cursor: "pointer" }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-          </button>
+          <div style={{ display:"flex", gap:6 }}>
+            {WIZARD_STEPS.map((label, i) => (
+              <div key={i} style={{ flex:1 }}>
+                <div style={{ height:3, borderRadius:2, marginBottom:4, background: i + 1 <= step ? "var(--brand)" : "var(--panel-3)" }} />
+                <div style={{ fontSize:10, color: i + 1 === step ? "var(--brand)" : "var(--ink-4)", fontWeight: i + 1 === step ? 600 : 400 }}>
+                  {label}
+                  {i === 1 && selBenches.length > 0 && <span style={{ marginLeft:4, fontWeight:600, color:"var(--ink)" }}>{selBenches.length}</span>}
+                  {i === 2 && selAssets.length  > 0 && <span style={{ marginLeft:4, fontWeight:600, color:"var(--ink)" }}>{selAssets.length}</span>}
+                  {i === 3 && selPeople.length  > 0 && <span style={{ marginLeft:4, fontWeight:600, color:"var(--ink)" }}>{selPeople.length}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Body */}
-        <div style={{ padding: "18px 22px", display: "flex", flexDirection: "column", gap: 14 }}>
-          <div className="to-field">
-            <label>Center name <span style={{ color: "var(--bad)" }}>*</span></label>
-            <input placeholder="e.g. Frankfurt Integration Lab" value={form.name} onChange={e => set("name", e.target.value)} />
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div className="to-field">
-              <label>City <span style={{ color: "var(--bad)" }}>*</span></label>
-              <input placeholder="Frankfurt" value={form.city} onChange={e => set("city", e.target.value)} />
+        {/* Scrollable body */}
+        <div style={{ flex:1, overflowY:"auto", padding:"16px 22px" }}>
+
+          {/* Step 1 — Location */}
+          {step === 1 && (
+            <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+              <div className="to-field">
+                <label>Center name <span style={{ color:"var(--bad)" }}>*</span></label>
+                <input placeholder="e.g. Frankfurt Integration Lab" value={name} onChange={e => setName(e.target.value)} />
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                <div className="to-field">
+                  <label>City <span style={{ color:"var(--bad)" }}>*</span></label>
+                  <input placeholder="Frankfurt" value={city} onChange={e => setCity(e.target.value)} />
+                </div>
+                <div className="to-field">
+                  <label>Country</label>
+                  <select value={country} onChange={e => setCountry(e.target.value)}>
+                    {["Germany","Poland","Austria","Czech Republic","Hungary","Romania","USA","China","Japan"].map(c => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="to-field">
+                <label>Street address</label>
+                <input placeholder="e.g. Hanauer Landstraße 126-128" value={address} onChange={e => setAddress(e.target.value)} />
+              </div>
             </div>
-            <div className="to-field">
-              <label>Country</label>
-              <select value={form.country} onChange={e => set("country", e.target.value)}>
-                {["Germany", "Poland", "Austria", "Czech Republic", "Hungary", "Romania", "USA", "China", "Japan"].map(c => (
-                  <option key={c}>{c}</option>
-                ))}
-              </select>
+          )}
+
+          {/* Step 2 — Benches */}
+          {step === 2 && (
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              <div style={{ fontSize:13, color:"var(--ink-2)", marginBottom:4 }}>
+                Assign test benches to this center.
+                {selBenches.length > 0 && <b style={{ color:"var(--ink)", marginLeft:5 }}>{selBenches.length} selected</b>}
+              </div>
+              <SearchInput value={searchB} onChange={setSearchB} placeholder="Search benches…" />
+              {benchList.map(b => {
+                const curCenter = benchCenterName(b.id);
+                return (
+                  <AssignRow key={b.id}
+                    checked={selBenches.includes(b.id)}
+                    onToggle={() => toggleB(b.id)}
+                    left={[b.name, `${b.id} · ${b.location}`]}
+                    badge={curCenter && !selBenches.includes(b.id) ? curCenter : undefined}
+                    right={b.status}
+                  />
+                );
+              })}
+              {benchList.length === 0 && <div style={{ fontSize:13, color:"var(--ink-4)", textAlign:"center", padding:"20px 0" }}>No benches match.</div>}
             </div>
-          </div>
-          <div className="to-field">
-            <label>Street address</label>
-            <input placeholder="e.g. Hanauer Landstraße 126-128" value={form.address} onChange={e => set("address", e.target.value)} />
-          </div>
-          <div style={{ background: "var(--bg)", borderRadius: 8, padding: "10px 12px", fontSize: 12, color: "var(--ink-3)", display: "flex", gap: 8, alignItems: "flex-start" }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ flexShrink: 0, marginTop: 1, color: "var(--brand)" }}>
-              <circle cx="12" cy="12" r="9"/><path d="M12 16v-5M12 8h.01"/>
-            </svg>
-            Benches and assets can be assigned to the center after creation.
-          </div>
+          )}
+
+          {/* Step 3 — Assets */}
+          {step === 3 && (
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              <div style={{ fontSize:13, color:"var(--ink-2)", marginBottom:4 }}>
+                Register assets at this center.
+                {selAssets.length > 0 && <b style={{ color:"var(--ink)", marginLeft:5 }}>{selAssets.length} selected</b>}
+              </div>
+              <SearchInput value={searchA} onChange={setSearchA} placeholder="Search assets…" />
+              {assetList.map(a => (
+                <AssignRow key={a.tag}
+                  checked={selAssets.includes(a.tag)}
+                  onToggle={() => toggleA(a.tag)}
+                  left={[a.model, `#${a.tag} · ${a.cat}`]}
+                  right={a.status}
+                />
+              ))}
+              {assetList.length === 0 && <div style={{ fontSize:13, color:"var(--ink-4)", textAlign:"center", padding:"20px 0" }}>No assets match.</div>}
+            </div>
+          )}
+
+          {/* Step 4 — Team */}
+          {step === 4 && (
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              <div style={{ fontSize:13, color:"var(--ink-2)", marginBottom:4 }}>
+                Assign team members to this center.
+                {selPeople.length > 0 && <b style={{ color:"var(--ink)", marginLeft:5 }}>{selPeople.length} selected</b>}
+              </div>
+              <SearchInput value={searchP} onChange={setSearchP} placeholder="Search engineers…" />
+              {peopleList.map(eng => (
+                <label key={eng.id} style={{
+                  display:"flex", alignItems:"center", gap:10, padding:"9px 12px", borderRadius:8,
+                  border:`1px solid ${selPeople.includes(eng.id) ? "var(--brand)" : "var(--line-2)"}`,
+                  background: selPeople.includes(eng.id) ? "var(--brand-dim)" : "var(--panel-2)",
+                  cursor: eng.avail === "On Leave" ? "default" : "pointer", opacity: eng.avail === "On Leave" ? 0.55 : 1, transition:"all .1s",
+                }}>
+                  <input type="checkbox" checked={selPeople.includes(eng.id)} disabled={eng.avail === "On Leave"}
+                    onChange={() => eng.avail !== "On Leave" && toggleP(eng.id)}
+                    style={{ accentColor:"var(--brand)", width:15, height:15, flexShrink:0 }} />
+                  <div style={{
+                    width:32, height:32, borderRadius:8, display:"grid", placeItems:"center", flexShrink:0,
+                    background: selPeople.includes(eng.id) ? "var(--brand)" : "var(--panel-3)",
+                    color: selPeople.includes(eng.id) ? "white" : "var(--ink-2)",
+                    fontSize:11, fontWeight:700,
+                  }}>{eng.initials}</div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:13, fontWeight:550, color:"var(--ink)" }}>{eng.name}</div>
+                    <div style={{ fontSize:11, color:"var(--ink-3)" }}>{eng.role}</div>
+                  </div>
+                  <span style={{ fontSize:10, fontWeight:500, padding:"2px 7px", borderRadius:4, whiteSpace:"nowrap",
+                    color: AVAIL_C[eng.avail], background:`color-mix(in srgb, ${AVAIL_C[eng.avail]} 12%, transparent)` }}>
+                    {eng.avail}
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Footer */}
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, padding: "12px 22px 18px", borderTop: "1px solid var(--line)" }}>
-          <button className="to-btn ghost sm" onClick={onClose}>Cancel</button>
-          <button className="to-btn primary sm" disabled={!valid} onClick={() => { if (valid) onCreate(form); }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
-            Create center
+        <div style={{ display:"flex", justifyContent:"space-between", gap:8, padding:"12px 22px 18px", borderTop:"1px solid var(--line)" }}>
+          <button className="to-btn ghost sm" onClick={step > 1 ? () => setStep(s => s - 1) : onClose}>
+            {step > 1 ? "← Back" : "Cancel"}
           </button>
+          <div style={{ display:"flex", gap:8 }}>
+            {step < 4 && (
+              <button className="to-btn ghost sm" onClick={() => setStep(4)} style={{ color:"var(--ink-3)" }}>
+                Skip to review
+              </button>
+            )}
+            {step < 4 ? (
+              <button className="to-btn primary sm" disabled={step === 1 && !valid1} onClick={() => setStep(s => s + 1)}>
+                Next: {WIZARD_STEPS[step]} →
+              </button>
+            ) : (
+              <button className="to-btn primary sm" disabled={!valid1} onClick={handleCreate}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
+                Create center
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -657,9 +849,7 @@ function AssetsTab({ assets }: { assets: ReturnType<typeof ASSETS_INITIAL.filter
                 </td>
                 <td style={{ padding: "10px 14px", fontWeight: 550, color: "var(--ink)" }}>{a.name || "—"}</td>
                 <td style={{ padding: "10px 14px", color: "var(--ink-2)" }}>{a.model}</td>
-                <td style={{ padding: "10px 14px" }}>
-                  <span className="to-chip" style={{ fontSize: 10.5 }}>{a.cat}</span>
-                </td>
+                <td style={{ padding: "10px 14px", fontSize: 13, color: "var(--ink-2)" }}>{a.cat}</td>
                 <td style={{ padding: "10px 14px" }}>
                   <span style={{ fontSize: 12, fontWeight: 500, color: STATUS_C[a.status] || "var(--ink-3)", textTransform: "capitalize" }}>{a.status}</span>
                 </td>
@@ -852,7 +1042,7 @@ export function TestCenters({ centers, benches, onOpenCenter }: Props) {
             setNewCenters(prev => [...prev, {
               id: newId, name: draft.name, address: draft.address,
               city: draft.city, country: draft.country,
-              lat: 0, lng: 0, benchIds: [], assetTags: [],
+              lat: 0, lng: 0, benchIds: draft.benchIds, assetTags: draft.assetTags,
             }]);
             setModalOpen(false);
           }}
