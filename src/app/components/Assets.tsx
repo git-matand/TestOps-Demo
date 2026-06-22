@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Asset, DATA, STATUS_MAP } from "../data";
+import { Asset, DATA, STATUS_MAP, TEST_CENTERS } from "../data";
 import { SyncModal } from "./SyncModal";
 import { ScanModal } from "./QRModal";
 interface Props {
@@ -14,13 +14,31 @@ interface Props {
   addToast: (t: string, s?: string, type?: string) => void;
 }
 
-const TABS = [["registry","Registry"],["models","Models"],["categories","Categories"],["audit","Audit & Calibration"],["topology","Topology"]];
+const TABS = [["registry","Registry"],["models","Models"],["categories","Categories"],["audit","Audit & Calibration"],["licenses","Licenses"],["topology","Topology"]];
 const STAT_CARDS = [["all","Total assets","509"],["deployed","Deployed","415"],["ready","Ready to Deploy","94"],["audit","Due for Audit","6"],["archived","Archived","12"]];
 
 const EYE = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.6"/></svg>;
 const PEN = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 20h4L18 10l-4-4L4 16z"/><path d="M14 6l4 4"/></svg>;
 const COPY = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V4h12"/></svg>;
 const TRASH = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>;
+const MOVE  = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><polyline points="15 3 21 3 21 9"/><path d="M21 3L10 14"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>;
+
+const TODAY = new Date("2026-06-22");
+const WARN_DATE = new Date("2026-06-22");
+WARN_DATE.setMonth(WARN_DATE.getMonth() + 4);
+
+const LICENSES = [
+  { id:"L1", software:"CANoe 17",      vendor:"Vector Informatik", total:5, assigned:4, expiry:"2026-12-31", centerId:"TC-MUC" },
+  { id:"L2", software:"MATLAB R2024b", vendor:"MathWorks",         total:3, assigned:2, expiry:"2026-09-30", centerId:"TC-STR" },
+  { id:"L3", software:"CANdb++ 8",     vendor:"Vector Informatik", total:2, assigned:2, expiry:"2027-03-15", centerId:"TC-WAW" },
+];
+
+function expiryColor(d: string) {
+  const dt = new Date(d);
+  if (dt < TODAY)     return "var(--bad)";
+  if (dt < WARN_DATE) return "var(--warn)";
+  return "var(--ok)";
+}
 
 export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister, onDelete, onClone, onEdit, addToast }: Props) {
   const [tab, setTab] = useState("registry");
@@ -29,6 +47,8 @@ export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister,
   const [search, setSearch] = useState("");
   const [syncOpen, setSyncOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
+  const [reassignTag, setReassignTag] = useState<string | null>(null);
+  const [targetCenter, setTargetCenter] = useState("");
 
   const visible = assets.filter(a => {
     if (filter === "ready") return a.status === "ready";
@@ -147,6 +167,7 @@ export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister,
                           <div className="to-row" style={{gap:5}}>
                             <button className="to-ract" title="View" onClick={() => onOpenAsset(a.tag)}>{EYE}</button>
                             <button className="to-ract" title="Edit" onClick={() => onEdit ? onEdit(a.tag) : onOpenAsset(a.tag)}>{PEN}</button>
+                            <button className="to-ract" title="Reassign to Test Center" onClick={() => { setReassignTag(a.tag); setTargetCenter(""); }}>{MOVE}</button>
                             <button className="to-ract" title="Clone" onClick={() => onClone(a.tag)}>{COPY}</button>
                             <button className="to-ract del" title="Delete" onClick={() => onDelete(a.tag)}>{TRASH}</button>
                           </div>
@@ -250,6 +271,116 @@ export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister,
         </div>
       )}
 
+      {tab === "licenses" && (
+        <div className="to-panel">
+          <div className="to-panel-h">
+            <span className="to-eyebrow">Software Licenses</span>
+            <button className="to-btn accent sm" onClick={() => addToast("Add license", "Opening license registration…", "info")}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><path d="M12 5v14M5 12h14"/></svg>
+              Add license
+            </button>
+          </div>
+          <div style={{overflowX:"auto"}}>
+            <table className="to-tbl">
+              <thead>
+                <tr>
+                  <th>Software</th>
+                  <th>Vendor</th>
+                  <th style={{textAlign:"center"}}>Total</th>
+                  <th style={{textAlign:"center"}}>Assigned</th>
+                  <th style={{textAlign:"center"}}>Available</th>
+                  <th style={{width:160}}>Utilization</th>
+                  <th>Expiry</th>
+                  <th>Test Center</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {LICENSES.map(l => {
+                  const available = l.total - l.assigned;
+                  const pct = Math.round(l.assigned / l.total * 100);
+                  const availColor = available === 0 ? "var(--bad)" : available === 1 ? "var(--warn)" : "var(--ok)";
+                  const expColor = expiryColor(l.expiry);
+                  const ctr = TEST_CENTERS.find(c => c.id === l.centerId);
+                  const ctrColors: Record<string, { color: string; bg: string }> = {
+                    "TC-MUC": { color:"var(--brand)", bg:"rgba(94,106,210,.1)" },
+                    "TC-STR": { color:"var(--warn)",  bg:"rgba(184,134,11,.1)" },
+                    "TC-WAW": { color:"var(--ok)",    bg:"rgba(26,150,72,.1)"  },
+                  };
+                  const cc = ctrColors[l.centerId] ?? { color:"var(--ink-4)", bg:"var(--panel-2)" };
+                  return (
+                    <tr key={l.id}>
+                      <td style={{fontWeight:550}}>{l.software}</td>
+                      <td className="to-muted">{l.vendor}</td>
+                      <td className="to-mono" style={{textAlign:"center"}}>{l.total}</td>
+                      <td className="to-mono" style={{textAlign:"center"}}>{l.assigned}</td>
+                      <td style={{textAlign:"center"}}>
+                        <span style={{
+                          fontWeight:600, fontSize:13,
+                          color: availColor,
+                        }}>
+                          {available}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <div style={{flex:1,height:6,borderRadius:4,background:"var(--panel-3)",overflow:"hidden"}}>
+                            <div style={{height:"100%",width:`${pct}%`,background:pct>=100?"var(--bad)":pct>=70?"var(--warn)":"var(--brand)",borderRadius:4}} />
+                          </div>
+                          <span style={{fontSize:11,color:"var(--ink-4)",minWidth:28}}>{pct}%</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{fontFamily:"var(--mono)",fontSize:12.5,color:expColor,fontWeight:expColor!=="var(--ok)"?600:undefined}}>
+                          {l.expiry}
+                        </span>
+                        {expColor === "var(--warn)" && (
+                          <span style={{marginLeft:6,fontSize:10,padding:"1px 6px",borderRadius:8,background:"rgba(184,134,11,.1)",color:"var(--warn)",fontWeight:600}}>
+                            Expiring soon
+                          </span>
+                        )}
+                        {expColor === "var(--bad)" && (
+                          <span style={{marginLeft:6,fontSize:10,padding:"1px 6px",borderRadius:8,background:"rgba(192,57,43,.1)",color:"var(--bad)",fontWeight:600}}>
+                            Expired
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        {ctr && (
+                          <span style={{
+                            fontSize:11.5,padding:"2px 10px",borderRadius:12,fontWeight:600,
+                            background:cc.bg,color:cc.color,
+                          }}>
+                            {ctr.city}
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        <div className="to-row" style={{gap:5}}>
+                          <button className="to-ract" title="Edit" onClick={() => addToast("Edit license", `Editing ${l.software}…`, "info")}>{PEN}</button>
+                          <button className="to-ract del" title="Remove" onClick={() => addToast("License removed", l.software, "ok")}>{TRASH}</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div style={{padding:"10px 16px",borderTop:"1px solid var(--line)",display:"flex",gap:16}}>
+            {[
+              { label:"Total seats", val: LICENSES.reduce((s,l)=>s+l.total,0), color:"var(--ink)" },
+              { label:"In use",      val: LICENSES.reduce((s,l)=>s+l.assigned,0), color:"var(--brand)" },
+              { label:"Available",   val: LICENSES.reduce((s,l)=>s+(l.total-l.assigned),0), color:"var(--ok)" },
+            ].map(k => (
+              <span key={k.label} style={{fontSize:12,color:"var(--ink-4)"}}>
+                {k.label}: <b style={{color:k.color}}>{k.val}</b>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {tab === "topology" && (
         <div className="to-panel">
           <div className="to-panel-h"><span className="to-eyebrow">Physical layout · Lab 2 · Rack rows A–C</span></div>
@@ -267,6 +398,134 @@ export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister,
 
       <SyncModal open={syncOpen} onClose={() => setSyncOpen(false)} onSynced={() => addToast("Sync complete","3 assets imported · 2 updated · 2 conflicts flagged")} />
       <ScanModal open={scanOpen} onClose={() => setScanOpen(false)} onScanned={tag => { setScanOpen(false); onOpenAsset(tag); }} />
+
+      {reassignTag && (() => {
+        const asset = assets.find(a => a.tag === reassignTag);
+        if (!asset) return null;
+        const canConfirm = targetCenter.length > 0;
+        return (
+          <div
+            style={{
+              position:"fixed", inset:0,
+              background:"rgba(0,0,0,.46)", backdropFilter:"blur(4px)",
+              display:"flex", alignItems:"center", justifyContent:"center",
+              zIndex:900, padding:20,
+            }}
+            onClick={e => e.target === e.currentTarget && setReassignTag(null)}
+          >
+            <div style={{
+              background:"var(--panel)", borderRadius:14,
+              border:"1px solid var(--line)",
+              width:440, maxWidth:"100%",
+              boxShadow:"0 24px 56px rgba(0,0,0,.32)",
+            }}>
+              {/* Header */}
+              <div style={{
+                padding:"18px 22px", borderBottom:"1px solid var(--line)",
+                display:"flex", alignItems:"flex-start", justifyContent:"space-between",
+              }}>
+                <div>
+                  <div style={{fontSize:15.5,fontWeight:660,color:"var(--ink)"}}>Reassign Asset</div>
+                  <div style={{fontSize:11.5,color:"var(--ink-4)",marginTop:2}}>Move asset to a different Test Center</div>
+                </div>
+                <button className="to-iconbtn" style={{background:"var(--panel-2)"}} onClick={() => setReassignTag(null)}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+              </div>
+
+              {/* Body */}
+              <div style={{padding:"20px 22px"}}>
+                {/* Asset info */}
+                <div style={{
+                  padding:"12px 14px", borderRadius:8,
+                  background:"var(--panel-2)", border:"1px solid var(--line)",
+                  marginBottom:20,
+                }}>
+                  <div style={{fontSize:10,fontWeight:600,color:"var(--ink-4)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:5}}>
+                    Selected Asset
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <span style={{fontFamily:"var(--mono)",fontSize:12,padding:"2px 8px",borderRadius:5,background:"var(--panel-3)",color:"var(--brand)",fontWeight:600}}>
+                      {asset.tag}
+                    </span>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:550,color:"var(--ink)"}}>{asset.name}</div>
+                      <div style={{fontSize:11,color:"var(--ink-4)",marginTop:1}}>
+                        Current location: <span style={{color:"var(--ink-2)"}}>{asset.location || "—"}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Center select */}
+                <label style={{fontSize:11,fontWeight:600,color:"var(--ink-3)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:8}}>
+                  Assign to Test Center
+                </label>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {TEST_CENTERS.map(c => {
+                    const colors: Record<string, { color: string; bg: string; border: string }> = {
+                      "TC-MUC": { color:"var(--brand)", bg:"rgba(94,106,210,.08)",  border:"var(--brand)" },
+                      "TC-STR": { color:"var(--warn)",  bg:"rgba(184,134,11,.08)", border:"var(--warn)"  },
+                      "TC-WAW": { color:"var(--ok)",    bg:"rgba(26,150,72,.08)",  border:"var(--ok)"    },
+                    };
+                    const cc = colors[c.id] ?? { color:"var(--ink-3)", bg:"var(--panel-2)", border:"var(--line)" };
+                    const selected = targetCenter === c.id;
+                    return (
+                      <div
+                        key={c.id}
+                        onClick={() => setTargetCenter(c.id)}
+                        style={{
+                          display:"flex", alignItems:"center", gap:12,
+                          padding:"11px 14px", borderRadius:9, cursor:"pointer",
+                          border:`1.5px solid ${selected ? cc.border : "var(--line)"}`,
+                          background: selected ? cc.bg : "var(--panel)",
+                          transition:"all .1s",
+                        }}
+                      >
+                        <span style={{
+                          width:10, height:10, borderRadius:"50%", flexShrink:0,
+                          background: selected ? cc.color : "var(--line-2)",
+                          transition:"background .1s",
+                        }} />
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:13,fontWeight:selected?600:400,color:selected?cc.color:"var(--ink)"}}>{c.name}</div>
+                          <div style={{fontSize:11,color:"var(--ink-4)",marginTop:1}}>{c.city} · {c.country}</div>
+                        </div>
+                        {selected && (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={cc.color} strokeWidth="2.2">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div style={{
+                padding:"14px 22px", borderTop:"1px solid var(--line)",
+                display:"flex", justifyContent:"flex-end", gap:8,
+              }}>
+                <button className="to-btn ghost sm" onClick={() => setReassignTag(null)}>Cancel</button>
+                <button
+                  className="to-btn primary sm"
+                  disabled={!canConfirm}
+                  style={{opacity:canConfirm?1:.45}}
+                  onClick={() => {
+                    if (!canConfirm) return;
+                    const ctr = TEST_CENTERS.find(c => c.id === targetCenter);
+                    addToast("Asset reassigned", `${asset.tag} → ${ctr?.city}`, "ok");
+                    setReassignTag(null);
+                  }}
+                >
+                  Confirm reassignment
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

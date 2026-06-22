@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
-import { Asset, ASSETS_INITIAL, DATA, TestBench, BENCHES_INITIAL, TEST_CENTERS } from "./data";
+import { Asset, ASSETS_INITIAL, DATA, TestBench, BENCHES_INITIAL, TEST_CENTERS, BRAND_CONFIG } from "./data";
+
+export type Role = "manager" | "hw-engineer" | "engineer";
 import { Dashboard } from "./components/Dashboard";
 import { Assets } from "./components/Assets";
 import { Edge } from "./components/Edge";
@@ -15,8 +17,9 @@ import { BenchDetail } from "./components/BenchDetail";
 import { AIChat } from "./components/AIChat";
 import { AssetForm } from "./components/AssetForm";
 import { CreateBenchSheet } from "./components/CreateBenchSheet";
+import { Teams } from "./components/Teams";
 
-type Screen = "ops" | "assets" | "edge" | "campaigns" | "ai" | "reports" | "admin" | "roadmap" | "benches" | "centers";
+type Screen = "ops" | "assets" | "edge" | "campaigns" | "ai" | "reports" | "admin" | "roadmap" | "benches" | "centers" | "teams";
 
 interface ToastItem { id: number; title: string; subtitle?: string; type?: string }
 interface DrawerState { open: boolean; type: "dut" | "asset" | null; id: string | null }
@@ -26,7 +29,7 @@ interface AIAnswer { q: string; summary: string; rows?: typeof DATA.duts }
 const TITLES: Record<Screen, string> = {
   ops:"Live Dashboard", assets:"Assets", edge:"Edge & Telemetry", campaigns:"Campaigns",
   ai:"AI Insights", reports:"Reports", admin:"Users & Audit", roadmap:"Future modules",
-  benches:"Test Benches", centers:"Test Centers",
+  benches:"Test Benches", centers:"Test Centers", teams:"Teams",
 };
 
 const NAV: { screen: Screen; label: string; icon: string; group: string; soon?: boolean; badge?: string }[] = [
@@ -37,7 +40,8 @@ const NAV: { screen: Screen; label: string; icon: string; group: string; soon?: 
   {group:"", screen:"campaigns", label:"Campaigns", icon:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>'},
   {group:"Intelligence", screen:"ai", label:"AI Insights", icon:'<path d="M9 3a3 3 0 0 0-3 3 3 3 0 0 0-1 5.8V18a3 3 0 0 0 4 2.8M9 3a2.5 2.5 0 0 1 3 2.4v13.2A2.5 2.5 0 0 1 9 21M15 3a3 3 0 0 1 3 3 3 3 0 0 1 1 5.8V18a3 3 0 0 1-4 2.8M15 3a2.5 2.5 0 0 0-3 2.4"/>'},
   {group:"", screen:"reports", label:"Reports", icon:'<path d="M5 3h9l5 5v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5M8 13h8M8 17h5"/>'},
-  {group:"Administer", screen:"admin", label:"Users & Audit", icon:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="18" cy="9" r="2.2"/><path d="M21.5 20c0-2.4-1.6-4.3-3.5-4.3"/>'},
+  {group:"Administer", screen:"teams", label:"Teams", icon:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'},
+  {group:"", screen:"admin", label:"Users & Audit", icon:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="18" cy="9" r="2.2"/><path d="M21.5 20c0-2.4-1.6-4.3-3.5-4.3"/>'},
 ];
 
 export default function App() {
@@ -52,6 +56,7 @@ export default function App() {
   const [modal, setModal] = useState<ModalState>({open:false, type:null, tags:[]});
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [railOpen, setRailOpen] = useState(false);
+  const [currentRole, setCurrentRole] = useState<Role>("manager");
   const [query, setQuery] = useState("");
   const [theme, setTheme] = useState<"light" | "dark">(() =>
     (localStorage.getItem("to-theme") as "light" | "dark") || "light"
@@ -171,7 +176,7 @@ export default function App() {
   let lastGroup = "";
 
   return (
-    <div className="testops" data-theme={theme}>
+    <div className="testops" data-theme={theme} style={{"--brand": BRAND_CONFIG.primaryColor} as React.CSSProperties}>
       <div className="to-app">
         {/* Rail */}
         <aside className={`to-rail ${railOpen ? "show" : ""}`}>
@@ -188,7 +193,7 @@ export default function App() {
               <div className="sub">Platform</div>
             </div>
           </div>
-          <div className="to-tagline">Smarter testing. Smarter operations.</div>
+          <div className="to-tagline">{BRAND_CONFIG.tagline}</div>
 
           <nav>
             {NAV.map(item => {
@@ -211,6 +216,46 @@ export default function App() {
           </nav>
 
           <div className="to-rail-foot">
+            {/* Role switcher for demo */}
+            <div style={{ padding: "10px 12px 12px", borderBottom: "1px solid var(--line)" }}>
+              <div style={{
+                fontSize: 9.5, fontWeight: 700, color: "var(--ink-4)",
+                textTransform: "uppercase", letterSpacing: ".08em",
+                marginBottom: 7, display: "flex", alignItems: "center", gap: 5,
+              }}>
+                <span style={{
+                  padding: "1px 5px", borderRadius: 3,
+                  background: "rgba(94,106,210,.12)", color: "var(--brand)",
+                  fontSize: 8.5, fontWeight: 700, letterSpacing: ".06em",
+                }}>DEMO</span>
+                View Role
+              </div>
+              <div style={{
+                display: "grid", gridTemplateColumns: "1fr 1fr 1fr",
+                background: "var(--panel-2)", borderRadius: 7, padding: 2, gap: 2,
+              }}>
+                {(["manager", "hw-engineer", "engineer"] as const).map(r => {
+                  const labels: Record<Role, string> = { "manager": "Manager", "hw-engineer": "HW Eng", "engineer": "Engineer" };
+                  const active = currentRole === r;
+                  return (
+                    <button
+                      key={r}
+                      onClick={() => setCurrentRole(r)}
+                      style={{
+                        padding: "5px 2px", borderRadius: 5, border: "none",
+                        fontSize: 10.5, fontWeight: active ? 600 : 400,
+                        background: active ? "var(--panel)" : "transparent",
+                        color: active ? "var(--brand)" : "var(--ink-4)",
+                        cursor: "pointer", transition: "all .12s",
+                        boxShadow: active ? "0 1px 3px rgba(0,0,0,.1)" : "none",
+                      }}
+                    >
+                      {labels[r]}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             <div className="to-who">
               <div className="to-avatar">AK</div>
               <div><div className="nm">A. Kovalenko</div><div className="rl">Test Manager</div></div>
@@ -239,7 +284,7 @@ export default function App() {
                 )}
               </button>
             </div>
-            <div className="to-spyro">Spyrosoft Group</div>
+            <div className="to-spyro">{BRAND_CONFIG.companyName}</div>
           </div>
         </aside>
 
@@ -288,12 +333,13 @@ export default function App() {
           </header>
 
           <main className="to-content">
-            {screen === "ops" && <Dashboard onBedClick={id => addToast("Bed "+id,"Opening bed detail…","info")} onGoReports={() => go("reports")} onGoAI={() => go("ai")} addToast={addToast} />}
+            {screen === "ops" && <Dashboard onBedClick={id => addToast("Bed "+id,"Opening bed detail…","info")} onGoReports={() => go("reports")} onGoAI={() => go("ai")} addToast={addToast} role={currentRole} />}
             {screen === "assets" && <Assets assets={assets} onOpenAsset={openAssetDrawer} onCheckout={openCheckoutModal} onCheckin={openCheckinModal} onRegister={() => setAssetFormState({open:true, mode:"create"})} onDelete={deleteAsset} onClone={cloneAsset} onEdit={tag => setAssetFormState({open:true, mode:"edit", assetTag:tag})} addToast={addToast} />}
             {screen === "edge" && <Edge addToast={addToast} />}
             {screen === "campaigns" && <Campaigns addToast={addToast} />}
             {screen === "ai" && <AIInsights answer={aiAnswer} onQuery={handleQuery} onOpenDUT={openDUTDrawer} />}
             {screen === "reports" && <Reports addToast={addToast} />}
+            {screen === "teams" && <Teams addToast={addToast} />}
             {screen === "admin" && <Admin />}
             {screen === "roadmap" && <Roadmap />}
             {screen === "centers" && (
@@ -328,6 +374,7 @@ export default function App() {
                   onOpenAsset={openAssetDrawer}
                   onEdit={() => addToast("Edit bench", "Opening edit form…", "info")}
                   addToast={addToast}
+                  role={currentRole}
                 />
               );
             })()}

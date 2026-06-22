@@ -1,3 +1,10 @@
+export const BRAND_CONFIG = {
+  companyName: "Spyrosoft Group",
+  logoInitials: "SG",
+  primaryColor: "#5E6AD2",
+  tagline: "Smarter testing. Smarter operations.",
+};
+
 export interface Asset {
   tag: string; name: string; serial: string; model: string; cat: string;
   status: 'deployed' | 'ready' | 'investigating' | 'archived';

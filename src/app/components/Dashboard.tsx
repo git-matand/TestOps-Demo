@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { DATA, BENCHES_INITIAL, ASSETS_INITIAL, TEST_CENTERS } from "../data";
+import type { Role } from "../App";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Props {
@@ -7,6 +8,7 @@ interface Props {
   onGoReports: () => void;
   onGoAI: () => void;
   addToast: (t: string, s?: string, type?: string) => void;
+  role?: Role;
 }
 
 type Sev = "critical" | "warning";
@@ -222,7 +224,7 @@ function IssueCard({ issue, onAct }: { issue: Issue; onAct: () => void }) {
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export function Dashboard({ onBedClick, onGoReports, addToast }: Props) {
+export function Dashboard({ onBedClick, onGoReports, addToast, role = "engineer" }: Props) {
   const [sel, setSel] = useState<string[]>(["all"]);
 
   function toggle(id: string) {
@@ -397,8 +399,8 @@ export function Dashboard({ onBedClick, onGoReports, addToast }: Props) {
         ))}
       </div>
 
-      {/* ── Heatmap + Campaigns ───────────────────────────────────────────── */}
-      <div className="to-grid to-g12" style={{ marginBottom: 16 }}>
+      {/* ── Heatmap + Campaigns ─────────────── hidden for manager role ───── */}
+      {role !== "manager" && <div className="to-grid to-g12" style={{ marginBottom: 16 }}>
         <div className="to-s7">
           <div className="to-panel">
             <div className="to-panel-h">
@@ -468,7 +470,7 @@ export function Dashboard({ onBedClick, onGoReports, addToast }: Props) {
             </div>
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* ── Alerts & Events (full width) ─────────────────────────────────── */}
       <div className="to-panel">

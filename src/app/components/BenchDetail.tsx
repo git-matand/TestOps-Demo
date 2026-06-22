@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { TestBench, Asset, BENCHES_INITIAL } from "../data";
+import type { Role } from "../App";
 import { upTimelineSVG, makeSeries } from "../utils";
 import { FirmwareFlashSheet, DeviceActionModal } from "./FirmwareFlashSheet";
 import { TsChart, MetricTile, useTelemetryData, type TimeRange } from "./TelemetryCharts";
@@ -11,6 +12,7 @@ interface Props {
   onOpenAsset: (tag: string) => void;
   onEdit: () => void;
   addToast: (t: string, s?: string, type?: string) => void;
+  role?: Role;
 }
 
 type Tab = "overview" | "composition" | "telemetry" | "diagnostics";
@@ -60,8 +62,13 @@ function makeUptimeSegments(bench: TestBench): { up: boolean; frac: number }[] {
   return [{ up: true, frac: 0.96 }, { up: false, frac: 0.02 }, { up: true, frac: 0.02 }];
 }
 
-export function BenchDetail({ bench, assets, onBack, onOpenAsset, onEdit, addToast }: Props) {
+export function BenchDetail({ bench, assets, onBack, onOpenAsset, onEdit, addToast, role = "engineer" }: Props) {
   const [tab, setTab] = useState<Tab>("overview");
+
+  const visibleTabs = role === "manager"
+    ? TABS.filter(t => t.id !== "telemetry" && t.id !== "diagnostics")
+    : TABS;
+  const effectiveTab = visibleTabs.some(t => t.id === tab) ? tab : "overview";
   const [timeRange, setTimeRange] = useState<TimeRange>("Last 6 h");
   const [flashOpen, setFlashOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<"reset"|"stop"|null>(null);
@@ -166,8 +173,8 @@ export function BenchDetail({ bench, assets, onBack, onOpenAsset, onEdit, addToa
           </div>
         </div>
         <div className="to-tabs" style={{ marginBottom: 0, padding: "0 22px" }}>
-          {TABS.map(t => (
-            <button key={t.id} className={`to-tab ${tab === t.id ? "on" : ""}`} onClick={() => setTab(t.id)}>
+          {visibleTabs.map(t => (
+            <button key={t.id} className={`to-tab ${effectiveTab === t.id ? "on" : ""}`} onClick={() => setTab(t.id)}>
               {t.label}
             </button>
           ))}
@@ -200,7 +207,7 @@ export function BenchDetail({ bench, assets, onBack, onOpenAsset, onEdit, addToa
         )}
 
         {/* OVERVIEW */}
-        {tab === "overview" && (
+        {effectiveTab === "overview" && (
           <div className="to-grid to-g12" style={{ gap: 18 }}>
             <div className="to-s8">
               <div className="to-panel" style={{ marginBottom: 18 }}>
@@ -359,7 +366,7 @@ export function BenchDetail({ bench, assets, onBack, onOpenAsset, onEdit, addToa
         )}
 
         {/* COMPOSITION */}
-        {tab === "composition" && (
+        {effectiveTab === "composition" && (
           <div>
             {bench.composition.length === 0 ? (
               <div className="to-chart-empty" style={{ height: 160 }}>
@@ -436,7 +443,7 @@ export function BenchDetail({ bench, assets, onBack, onOpenAsset, onEdit, addToa
         )}
 
         {/* TELEMETRY */}
-        {tab === "telemetry" && (
+        {effectiveTab === "telemetry" && (
           <div>
             {/* Toolbar */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
@@ -606,7 +613,7 @@ export function BenchDetail({ bench, assets, onBack, onOpenAsset, onEdit, addToa
         )}
 
         {/* DIAGNOSTICS */}
-        {tab === "diagnostics" && (
+        {effectiveTab === "diagnostics" && (
           <div className="to-grid to-g12" style={{ gap: 18 }}>
             <div className="to-s7">
               {/* Build info */}
