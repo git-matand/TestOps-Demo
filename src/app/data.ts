@@ -122,18 +122,18 @@ export const DATA = {
   ] as DUT[],
   campaigns: {
     planned: [
-      {id:"CMP-220",title:"Thermal Endurance Q3",owner:"KN",beds:1,duts:4,due:"Starts Jun 22",integ:"Jenkins",prog:0,risk:false},
-      {id:"CMP-221",title:"ADAS Sensor Fusion v1",owner:"AK",beds:2,duts:6,due:"Queued · waiting TB-09",integ:"Polarion",prog:0,risk:true},
+      {id:"CMP-220",title:"Thermal Endurance Q3",owner:"KN",beds:1,duts:4,due:"Starts Jun 22",integ:"Jenkins",prog:0,risk:false,centerId:"TC-STR"},
+      {id:"CMP-221",title:"ADAS Sensor Fusion v1",owner:"AK",beds:2,duts:6,due:"Queued · waiting TB-09",integ:"Polarion",prog:0,risk:true,centerId:"TC-STR"},
     ],
     progress: [
-      {id:"CMP-201",title:"CAN-Stack Regression v2.4",owner:"LW",beds:2,duts:6,due:"Due Jun 18",integ:"Jira",prog:78,risk:false},
-      {id:"CMP-205",title:"OTA Firmware Update Suite",owner:"AK",beds:2,duts:8,due:"Due Jun 20",integ:"GitLab CI",prog:45,risk:false},
-      {id:"CMP-208",title:"ECU Boot Stress Test",owner:"SM",beds:1,duts:5,due:"Due Jun 19",integ:"TestRail",prog:91,risk:false},
-      {id:"CMP-210",title:"HW-in-loop Validation Q2",owner:"KN",beds:1,duts:4,due:"Due Jun 24",integ:"Jenkins",prog:33,risk:false},
-      {id:"CMP-212",title:"Power Cycle Endurance",owner:"SM",beds:1,duts:6,due:"Due Jun 21",integ:"Jira",prog:62,risk:false},
+      {id:"CMP-201",title:"CAN-Stack Regression v2.4",owner:"LW",beds:2,duts:6,due:"Due Jun 18",integ:"Jira",prog:78,risk:false,centerId:"TC-MUC"},
+      {id:"CMP-205",title:"OTA Firmware Update Suite",owner:"AK",beds:2,duts:8,due:"Due Jun 20",integ:"GitLab CI",prog:45,risk:false,centerId:"TC-STR"},
+      {id:"CMP-208",title:"ECU Boot Stress Test",owner:"SM",beds:1,duts:5,due:"Due Jun 19",integ:"TestRail",prog:91,risk:false,centerId:"TC-MUC"},
+      {id:"CMP-210",title:"HW-in-loop Validation Q2",owner:"KN",beds:1,duts:4,due:"Due Jun 24",integ:"Jenkins",prog:33,risk:false,centerId:"TC-WAW"},
+      {id:"CMP-212",title:"Power Cycle Endurance",owner:"SM",beds:1,duts:6,due:"Due Jun 21",integ:"Jira",prog:62,risk:false,centerId:"TC-MUC"},
     ],
-    completed: [{id:"CMP-197",title:"CAN Gateway Smoke v2.3",owner:"SM",beds:1,duts:6,due:"Done Jun 12",integ:"Jenkins",prog:100,risk:false}],
-    report: [{id:"CMP-190",title:"Power Cycle Endurance — May",owner:"AK",beds:2,duts:7,due:"Report ready",integ:"Jira",prog:100,risk:false}],
+    completed: [{id:"CMP-197",title:"CAN Gateway Smoke v2.3",owner:"SM",beds:1,duts:6,due:"Done Jun 12",integ:"Jenkins",prog:100,risk:false,centerId:"TC-MUC"}],
+    report: [{id:"CMP-190",title:"Power Cycle Endurance — May",owner:"AK",beds:2,duts:7,due:"Report ready",integ:"Jira",prog:100,risk:false,centerId:"TC-MUC"}],
   },
   fte: {value:81.2},
   recs: [
@@ -562,19 +562,19 @@ export const TEST_CENTERS: TestCenter[] = [
   {
     id: "TC-MUC", name: "Munich HiL Lab", address: "Petuelring 130", city: "Munich", country: "Germany",
     lat: 48.177, lng: 11.556,
-    benchIds: ["TB-178", "TB-205", "TB-038", "TB-047", "TB-093", "TB-071"],
+    benchIds: ["TB-178", "TB-205", "TB-038", "TB-047", "TB-093", "TB-071", "TB-119", "TB-177"],
     assetTags: ["00522", "00240", "00197", "00517", "00516", "00524", "00510", "00527"],
   },
   {
     id: "TC-STR", name: "Stuttgart Integration Center", address: "Epplestraße 225", city: "Stuttgart", country: "Germany",
     lat: 48.740, lng: 9.190,
-    benchIds: ["TB-146", "TB-112", "TB-156", "TB-014", "TB-055", "TB-199"],
+    benchIds: ["TB-146", "TB-112", "TB-156", "TB-014", "TB-055", "TB-199", "TB-134", "TB-214"],
     assetTags: ["00499", "00500", "00095", "00518", "00502"],
   },
   {
     id: "TC-WAW", name: "Warsaw Test Farm", address: "ul. Wołoska 9", city: "Warsaw", country: "Poland",
     lat: 52.186, lng: 21.001,
-    benchIds: ["TB-084", "TB-231", "TB-067", "TB-033", "TB-022", "TB-088", "TB-102"],
+    benchIds: ["TB-084", "TB-231", "TB-067", "TB-033", "TB-022", "TB-088", "TB-102", "TB-162"],
     assetTags: ["00478", "00466", "00506"],
   },
 ];

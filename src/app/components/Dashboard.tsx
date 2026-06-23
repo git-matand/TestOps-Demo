@@ -80,15 +80,26 @@ function findCenterCity(benchId: string): string | undefined {
 
 function computeIssues(sel: string[]): Issue[] {
   const isAll = sel.includes("all");
+  const selectedCenters = isAll ? TEST_CENTERS : TEST_CENTERS.filter(c => sel.includes(c.id));
+  const selectedCities  = new Set(selectedCenters.map(c => c.city));
+
+  // Returns true if a bench (by any ID style) belongs to the selected centers
+  const benchInScope = (benchId: string) =>
+    isAll || !!selectedCenters.find(c => c.benchIds.includes(benchId)) ||
+    selectedCities.has(findCenterCity(benchId) ?? "");
 
   const scopeIds = isAll
     ? BENCHES_INITIAL.map(b => b.id)
-    : TEST_CENTERS.filter(c => sel.includes(c.id)).flatMap(c => c.benchIds);
+    : selectedCenters.flatMap(c => c.benchIds);
   const benches = BENCHES_INITIAL.filter(b => scopeIds.includes(b.id));
 
   const scopeTags = isAll
     ? null
-    : new Set(TEST_CENTERS.filter(c => sel.includes(c.id)).flatMap(c => c.assetTags));
+    : new Set(selectedCenters.flatMap(c => c.assetTags));
+
+  // Center name for an asset tag
+  const assetCenterName = (tag: string) =>
+    TEST_CENTERS.find(c => c.assetTags.includes(tag))?.city;
 
   const out: Issue[] = [];
 
@@ -111,25 +122,25 @@ function computeIssues(sel: string[]): Issue[] {
     });
   });
 
-  // Hot DUTs
-  DATA.duts.filter(d => d.temp > 80).forEach(d => out.push({
+  // Hot DUTs — scoped to selected centers via bench
+  DATA.duts.filter(d => d.temp > 80 && benchInScope(d.bed)).forEach(d => out.push({
     sev: "critical", kind: "dut", id: d.id,
     title: `Thermal alert: ${d.id}`,
     detail: `${d.name} · ${d.temp}°C on ${d.bed}`,
     benchId: d.bed, centerName: findCenterCity(d.bed),
   }));
 
-  // Degraded DUTs (not already hot)
-  DATA.duts.filter(d => d.status === "bad" && d.temp <= 80).forEach(d => out.push({
+  // Degraded DUTs — scoped
+  DATA.duts.filter(d => d.status === "bad" && d.temp <= 80 && benchInScope(d.bed)).forEach(d => out.push({
     sev: "warning", kind: "dut", id: d.id,
     title: `${d.id} degraded`,
     detail: `${d.name} · ${d.statusLabel} on ${d.bed}`,
     benchId: d.bed, centerName: findCenterCity(d.bed),
   }));
 
-  // Calibration overdue
+  // Calibration overdue — scoped
   DATA.duts
-    .filter(d => d.cal && d.cal !== "—" && new Date(d.cal) < TODAY)
+    .filter(d => d.cal && d.cal !== "—" && new Date(d.cal) < TODAY && benchInScope(d.bed))
     .forEach(d => out.push({
       sev: "warning", kind: "dut", id: d.id + "-cal",
       title: `${d.id} calibration overdue`,
@@ -137,7 +148,7 @@ function computeIssues(sel: string[]): Issue[] {
       benchId: d.bed, centerName: findCenterCity(d.bed),
     }));
 
-  // Assets investigating (scoped by center)
+  // Assets investigating — scoped by center assetTags
   const assets = scopeTags
     ? ASSETS_INITIAL.filter(a => scopeTags.has(a.tag))
     : ASSETS_INITIAL;
@@ -145,13 +156,17 @@ function computeIssues(sel: string[]): Issue[] {
     sev: "warning", kind: "asset", id: a.tag,
     title: `Asset #${a.tag} under investigation`,
     detail: `${a.model} · ${a.location}`,
+    centerName: assetCenterName(a.tag),
   }));
 
-  // Campaigns at risk
-  DATA.campaigns.planned.filter(c => c.risk).forEach(c => out.push({
+  // Campaigns at risk — scoped by centerId
+  DATA.campaigns.planned
+    .filter(c => c.risk && (isAll || selectedCenters.some(sc => sc.id === c.centerId)))
+    .forEach(c => out.push({
     sev: "warning", kind: "campaign", id: c.id,
     title: `${c.id} blocked`,
     detail: `${c.title} · ${c.due}`,
+    centerName: TEST_CENTERS.find(tc => tc.id === c.centerId)?.city,
   }));
 
   return out.sort((a, b) => a.sev === b.sev ? 0 : a.sev === "critical" ? -1 : 1);

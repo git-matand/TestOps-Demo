@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TestCenter, TestBench, ASSETS_INITIAL, BENCHES_INITIAL, TEST_CENTERS as ALL_CENTERS } from "../data";
+import { TestCenter, TestBench, Asset, ASSETS_INITIAL, BENCHES_INITIAL, TEST_CENTERS as ALL_CENTERS } from "../data";
 import { MapView } from "./MapView";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -225,17 +225,26 @@ function CenterCard({
   );
 }
 
-// ─── New Center Modal — 4-step wizard ─────────────────────────────────────────
+// ─── New Center Modal — 5-step wizard ─────────────────────────────────────────
 const MODAL_ENGINEERS = [
-  { id:"E1", initials:"AK", name:"Andriy Kovalenko",  role:"Test Manager",    avail:"Available" as const },
-  { id:"E2", initials:"SM", name:"Stefan Marek",       role:"Senior Engineer", avail:"Busy"      as const },
-  { id:"E3", initials:"LW", name:"Lidia Wójcik",       role:"Tester",          avail:"Available" as const },
-  { id:"E4", initials:"KN", name:"Kamil Nowak",        role:"DevOps Engineer", avail:"Available" as const },
-  { id:"E5", initials:"PB", name:"Piotr Bakun",        role:"Engineer",        avail:"On Leave"  as const },
-  { id:"E6", initials:"WP", name:"Wojciech Pikulski",  role:"RF Engineer",     avail:"Busy"      as const },
+  { id:"E1", initials:"AK", name:"Andriy Kovalenko",  role:"Test Manager",    avail:"Available" as const, city:"Munich",    country:"Germany" },
+  { id:"E2", initials:"SM", name:"Stefan Marek",       role:"Senior Engineer", avail:"Busy"      as const, city:"Munich",    country:"Germany" },
+  { id:"E3", initials:"LW", name:"Lidia Wójcik",       role:"Tester",          avail:"Available" as const, city:"Stuttgart", country:"Germany" },
+  { id:"E4", initials:"KN", name:"Kamil Nowak",        role:"DevOps Engineer", avail:"Available" as const, city:"Warsaw",    country:"Poland"  },
+  { id:"E5", initials:"PB", name:"Piotr Bakun",        role:"Engineer",        avail:"On Leave"  as const, city:"Warsaw",    country:"Poland"  },
+  { id:"E6", initials:"WP", name:"Wojciech Pikulski",  role:"RF Engineer",     avail:"Busy"      as const, city:"Warsaw",    country:"Poland"  },
+  { id:"E7", initials:"MK", name:"Martin Klein",       role:"Tester",          avail:"Available" as const, city:"Stuttgart", country:"Germany" },
+  { id:"E8", initials:"RB", name:"Rolf Bauer",         role:"Senior Engineer", avail:"Available" as const, city:"Stuttgart", country:"Germany" },
+  { id:"E9", initials:"TG", name:"Tobias Gryboś",      role:"Engineer",        avail:"Busy"      as const, city:"Munich",    country:"Germany" },
+];
+const EXISTING_TEAMS = [
+  { id:"TM-1", name:"Munich HiL Team",           city:"Munich",    country:"Germany", memberIds:["E1","E2","E9"] },
+  { id:"TM-2", name:"Stuttgart Integration Team", city:"Stuttgart", country:"Germany", memberIds:["E3","E7","E8"] },
+  { id:"TM-3", name:"Warsaw Automation Team",     city:"Warsaw",    country:"Poland",  memberIds:["E4","E5","E6"] },
 ];
 const AVAIL_C = { Available:"var(--ok)", Busy:"var(--warn)", "On Leave":"var(--ink-4)" } as const;
-const WIZARD_STEPS = ["Location", "Benches", "Assets", "Team"] as const;
+const AVAIL_ORDER: Record<string, number> = { Available:0, Busy:1, "On Leave":2 };
+const WIZARD_STEPS = ["Location", "Benches", "Assets", "Team", "Summary"] as const;
 
 function SearchInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
   return (
@@ -252,26 +261,13 @@ function SearchInput({ value, onChange, placeholder }: { value: string; onChange
   );
 }
 
-function AssignRow({ checked, disabled, onToggle, left, right, badge }: {
-  checked: boolean; disabled?: boolean; onToggle: () => void;
-  left: [string, string]; right?: string; badge?: string;
-}) {
+function LocBadge({ color, text }: { color: string; text: string }) {
   return (
-    <label style={{
-      display:"flex", alignItems:"center", gap:10, padding:"9px 12px", borderRadius:8,
-      border:`1px solid ${checked ? "var(--brand)" : "var(--line-2)"}`,
-      background: checked ? "var(--brand-dim)" : "var(--panel-2)",
-      cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.55 : 1, transition:"all .1s",
-    }}>
-      <input type="checkbox" checked={checked} disabled={disabled} onChange={onToggle}
-        style={{ accentColor:"var(--brand)", width:15, height:15, flexShrink:0 }} />
-      <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ fontSize:13, fontWeight:550, color:"var(--ink)" }}>{left[0]}</div>
-        <div style={{ fontSize:11, color:"var(--ink-3)" }}>{left[1]}</div>
-      </div>
-      {badge && <span style={{ fontSize:10, padding:"1px 6px", borderRadius:4, background:"var(--panel-3)", color:"var(--ink-3)", fontWeight:500, whiteSpace:"nowrap" }}>{badge}</span>}
-      {right && <span style={{ fontSize:11, fontWeight:500, color:"var(--ink-3)", whiteSpace:"nowrap" }}>{right}</span>}
-    </label>
+    <span style={{
+      fontSize:10, padding:"1px 6px", borderRadius:4, flexShrink:0, whiteSpace:"nowrap",
+      background:`color-mix(in srgb, ${color} 12%, transparent)`,
+      color, fontWeight:500,
+    }}>{text}</span>
   );
 }
 
@@ -279,49 +275,104 @@ function NewCenterModal({ onClose, onCreate }: {
   onClose: () => void;
   onCreate: (d: NewCenterDraft) => void;
 }) {
-  const [step, setStep]           = useState(1);
-  const [name, setName]           = useState("");
-  const [city, setCity]           = useState("");
-  const [country, setCountry]     = useState("Germany");
-  const [address, setAddress]     = useState("");
-  const [selBenches, setSelB]     = useState<string[]>([]);
-  const [selAssets,  setSelA]     = useState<string[]>([]);
-  const [selPeople,  setSelP]     = useState<string[]>([]);
-  const [searchB, setSearchB]     = useState("");
-  const [searchA, setSearchA]     = useState("");
-  const [searchP, setSearchP]     = useState("");
+  const [step, setStep]             = useState(1);
+  const [name, setName]             = useState("");
+  const [city, setCity]             = useState("");
+  const [country, setCountry]       = useState("Germany");
+  const [address, setAddress]       = useState("");
+  const [selBenches, setSelB]       = useState<string[]>([]);
+  const [selAssets,  setSelA]       = useState<string[]>([]);
+  const [selPeople,  setSelP]       = useState<string[]>([]);
+  const [selTeams,   setSelT]       = useState<string[]>([]);
+  const [searchB,    setSearchB]    = useState("");
+  const [searchA,    setSearchA]    = useState("");
+  const [searchP,    setSearchP]    = useState("");
+  const [catFilter,  setCatFilter]  = useState("All");
+  const [roleFilter, setRoleFilter] = useState("All");
+  const [teamTab,    setTeamTab]    = useState<"teams"|"people">("teams");
 
   const valid1 = name.trim() && city.trim();
-  const benchCenterName = (id: string) => ALL_CENTERS.find(c => c.benchIds.includes(id))?.city;
+
+  type LocStatus = "same" | "reassign" | "relocate" | "none";
+  const locStatus = (ec?: string, ey?: string): LocStatus => {
+    if (!ec || !ey) return "none";
+    if (ec === city && ey === country) return "same";
+    if (ey === country) return "reassign";
+    return "relocate";
+  };
+  const locOrder: Record<LocStatus, number> = { same:0, reassign:1, none:2, relocate:3 };
+
+  const badgeFor = (ec?: string, ey?: string): { text: string; color: string } | null => {
+    const s = locStatus(ec, ey);
+    if (s === "none") return null;
+    if (s === "same") return { text: ec!, color: "var(--ink-3)" };
+    if (s === "reassign") return { text: `${ec} · Reassignment needed`, color: "var(--warn)" };
+    return { text: `${ec}, ${ey} · Relocation needed`, color: "var(--bad)" };
+  };
 
   const toggleB = (id: string) => setSelB(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
   const toggleA = (t: string)  => setSelA(p => p.includes(t)  ? p.filter(x => x !== t)  : [...p, t]);
   const toggleP = (id: string) => setSelP(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
+  const toggleT = (teamId: string) => {
+    const tm = EXISTING_TEAMS.find(t => t.id === teamId);
+    if (!tm) return;
+    if (selTeams.includes(teamId)) {
+      setSelT(p => p.filter(x => x !== teamId));
+      setSelP(p => p.filter(id => !tm.memberIds.includes(id)));
+    } else {
+      setSelT(p => [...p, teamId]);
+      setSelP(p => [...new Set([...p, ...tm.memberIds])]);
+    }
+  };
+
+  const benchCtr = (id: string)  => ALL_CENTERS.find(c => c.benchIds.includes(id));
+  const assetCtr = (tag: string) => ALL_CENTERS.find(c => c.assetTags.includes(tag));
+
+  const benchList = [...BENCHES_INITIAL]
+    .filter(b => { const q = searchB.toLowerCase(); return b.id.toLowerCase().includes(q) || b.name.toLowerCase().includes(q); })
+    .sort((a, b) => {
+      const ca = benchCtr(a.id); const cb = benchCtr(b.id);
+      return locOrder[locStatus(ca?.city, ca?.country)] - locOrder[locStatus(cb?.city, cb?.country)];
+    });
+
+  const assetCats = ["All", ...Array.from(new Set(ASSETS_INITIAL.filter((a: Asset) => a.status !== "archived").map((a: Asset) => a.cat)))];
+  const assetList = [...ASSETS_INITIAL]
+    .filter((a: Asset) => a.status !== "archived")
+    .filter((a: Asset) => {
+      const q = searchA.toLowerCase();
+      return (catFilter === "All" || a.cat === catFilter) &&
+        (a.tag.includes(searchA) || (a.model ?? "").toLowerCase().includes(q) || (a.cat ?? "").toLowerCase().includes(q));
+    })
+    .sort((a: Asset, b: Asset) => {
+      const ca = assetCtr(a.tag); const cb = assetCtr(b.tag);
+      return locOrder[locStatus(ca?.city, ca?.country)] - locOrder[locStatus(cb?.city, cb?.country)];
+    });
+
+  const roles = ["All", ...Array.from(new Set(MODAL_ENGINEERS.map(e => e.role)))];
+  const peopleList = [...MODAL_ENGINEERS]
+    .filter(e => {
+      const q = searchP.toLowerCase();
+      return (roleFilter === "All" || e.role === roleFilter) &&
+        (e.name.toLowerCase().includes(q) || e.role.toLowerCase().includes(q));
+    })
+    .sort((a, b) => AVAIL_ORDER[a.avail] - AVAIL_ORDER[b.avail]);
+
+  const teamsForCity = [...EXISTING_TEAMS].sort((a, b) => {
+    const sa = a.city === city ? 0 : a.country === country ? 1 : 2;
+    const sb = b.city === city ? 0 : b.country === country ? 1 : 2;
+    return sa - sb;
+  });
 
   function handleCreate() {
     if (!valid1) return;
     onCreate({ name, city, country, address, benchIds: selBenches, assetTags: selAssets, personIds: selPeople });
   }
 
-  const benchList = BENCHES_INITIAL.filter(b =>
-    b.id.toLowerCase().includes(searchB.toLowerCase()) ||
-    b.name.toLowerCase().includes(searchB.toLowerCase())
-  );
-  const assetList = ASSETS_INITIAL.filter(a =>
-    a.tag.includes(searchA) ||
-    (a.model ?? "").toLowerCase().includes(searchA.toLowerCase()) ||
-    (a.cat  ?? "").toLowerCase().includes(searchA.toLowerCase())
-  );
-  const peopleList = MODAL_ENGINEERS.filter(e =>
-    e.name.toLowerCase().includes(searchP.toLowerCase()) ||
-    e.role.toLowerCase().includes(searchP.toLowerCase())
-  );
-
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.4)", display:"grid", placeItems:"center", zIndex:1000 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={{
-        background:"var(--panel)", borderRadius:14, width:520, maxWidth:"95vw",
+        background:"var(--panel)", borderRadius:14, width:540, maxWidth:"95vw",
         maxHeight:"88vh", display:"flex", flexDirection:"column",
         boxShadow:"0 24px 64px rgba(0,0,0,.28)", border:"1px solid var(--line-2)",
       }}>
@@ -330,9 +381,7 @@ function NewCenterModal({ onClose, onCreate }: {
           <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:14 }}>
             <div>
               <h3 style={{ margin:0, fontSize:16, fontWeight:660, color:"var(--ink)" }}>New Test Center</h3>
-              <div style={{ fontSize:12, color:"var(--ink-3)", marginTop:2 }}>
-                Step {step} of 4 — {WIZARD_STEPS[step - 1]}
-              </div>
+              <div style={{ fontSize:12, color:"var(--ink-3)", marginTop:2 }}>Step {step} of 5 — {WIZARD_STEPS[step - 1]}</div>
             </div>
             <button onClick={onClose} style={{ width:28, height:28, borderRadius:6, border:"1px solid var(--line-2)", background:"var(--panel-2)", display:"grid", placeItems:"center", color:"var(--ink-3)", cursor:"pointer", flexShrink:0 }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -353,10 +402,10 @@ function NewCenterModal({ onClose, onCreate }: {
           </div>
         </div>
 
-        {/* Scrollable body */}
+        {/* Body */}
         <div style={{ flex:1, overflowY:"auto", padding:"16px 22px" }}>
 
-          {/* Step 1 — Location */}
+          {/* ── Step 1: Location ── */}
           {step === 1 && (
             <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
               <div className="to-field">
@@ -365,14 +414,14 @@ function NewCenterModal({ onClose, onCreate }: {
               </div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
                 <div className="to-field">
-                  <label>City <span style={{ color:"var(--bad)" }}>*</span></label>
-                  <input placeholder="Frankfurt" value={city} onChange={e => setCity(e.target.value)} />
-                </div>
-                <div className="to-field">
                   <label>Country</label>
                   <select value={country} onChange={e => setCountry(e.target.value)}>
                     {["Germany","Poland","Austria","Czech Republic","Hungary","Romania","USA","China","Japan"].map(c => <option key={c}>{c}</option>)}
                   </select>
+                </div>
+                <div className="to-field">
+                  <label>City <span style={{ color:"var(--bad)" }}>*</span></label>
+                  <input placeholder="Frankfurt" value={city} onChange={e => setCity(e.target.value)} />
                 </div>
               </div>
               <div className="to-field">
@@ -382,84 +431,262 @@ function NewCenterModal({ onClose, onCreate }: {
             </div>
           )}
 
-          {/* Step 2 — Benches */}
+          {/* ── Step 2: Benches ── */}
           {step === 2 && (
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
               <div style={{ fontSize:13, color:"var(--ink-2)", marginBottom:4 }}>
-                Assign test benches to this center.
+                Select test benches to assign to this center.
                 {selBenches.length > 0 && <b style={{ color:"var(--ink)", marginLeft:5 }}>{selBenches.length} selected</b>}
               </div>
               <SearchInput value={searchB} onChange={setSearchB} placeholder="Search benches…" />
               {benchList.map(b => {
-                const curCenter = benchCenterName(b.id);
+                const bc = benchCtr(b.id);
+                const badge = badgeFor(bc?.city, bc?.country);
+                const isChecked = selBenches.includes(b.id);
                 return (
-                  <AssignRow key={b.id}
-                    checked={selBenches.includes(b.id)}
-                    onToggle={() => toggleB(b.id)}
-                    left={[b.name, `${b.id} · ${b.location}`]}
-                    badge={curCenter && !selBenches.includes(b.id) ? curCenter : undefined}
-                    right={b.status}
-                  />
+                  <label key={b.id} style={{
+                    display:"flex", alignItems:"center", gap:10, padding:"9px 12px", borderRadius:8,
+                    border:`1px solid ${isChecked ? "var(--brand)" : "var(--line-2)"}`,
+                    background: isChecked ? "var(--brand-dim)" : "var(--panel-2)",
+                    cursor:"pointer", transition:"all .1s",
+                  }}>
+                    <input type="checkbox" checked={isChecked} onChange={() => toggleB(b.id)}
+                      style={{ accentColor:"var(--brand)", width:15, height:15, flexShrink:0 }} />
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:13, fontWeight:550, color:"var(--ink)" }}>{b.name}</div>
+                      <div style={{ fontSize:11, color:"var(--ink-3)" }}>{b.id} · {b.location}</div>
+                    </div>
+                    {badge && <LocBadge {...badge} />}
+                    <span style={{ fontSize:11, fontWeight:500, color:SC[b.status] || "var(--ink-3)", whiteSpace:"nowrap" }}>{b.status}</span>
+                  </label>
                 );
               })}
               {benchList.length === 0 && <div style={{ fontSize:13, color:"var(--ink-4)", textAlign:"center", padding:"20px 0" }}>No benches match.</div>}
             </div>
           )}
 
-          {/* Step 3 — Assets */}
+          {/* ── Step 3: Assets ── */}
           {step === 3 && (
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
               <div style={{ fontSize:13, color:"var(--ink-2)", marginBottom:4 }}>
-                Register assets at this center.
+                Assign assets to this center.
                 {selAssets.length > 0 && <b style={{ color:"var(--ink)", marginLeft:5 }}>{selAssets.length} selected</b>}
               </div>
-              <SearchInput value={searchA} onChange={setSearchA} placeholder="Search assets…" />
-              {assetList.map(a => (
-                <AssignRow key={a.tag}
-                  checked={selAssets.includes(a.tag)}
-                  onToggle={() => toggleA(a.tag)}
-                  left={[a.model, `#${a.tag} · ${a.cat}`]}
-                  right={a.status}
-                />
-              ))}
+              <div style={{ display:"flex", gap:8, marginBottom:0 }}>
+                <div style={{ flex:1 }}><SearchInput value={searchA} onChange={setSearchA} placeholder="Search assets…" /></div>
+                <select value={catFilter} onChange={e => setCatFilter(e.target.value)}
+                  style={{ height:32, borderRadius:6, border:"1px solid var(--line-2)", background:"var(--panel-2)", color:"var(--ink)", fontSize:12, padding:"0 8px", flexShrink:0 }}>
+                  {assetCats.map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+              {assetList.map((a: Asset) => {
+                const ac = assetCtr(a.tag);
+                const badge = badgeFor(ac?.city, ac?.country);
+                const isChecked = selAssets.includes(a.tag);
+                return (
+                  <label key={a.tag} style={{
+                    display:"flex", alignItems:"center", gap:10, padding:"9px 12px", borderRadius:8,
+                    border:`1px solid ${isChecked ? "var(--brand)" : "var(--line-2)"}`,
+                    background: isChecked ? "var(--brand-dim)" : "var(--panel-2)",
+                    cursor:"pointer", transition:"all .1s",
+                  }}>
+                    <input type="checkbox" checked={isChecked} onChange={() => toggleA(a.tag)}
+                      style={{ accentColor:"var(--brand)", width:15, height:15, flexShrink:0 }} />
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:13, fontWeight:550, color:"var(--ink)" }}>{a.model}</div>
+                      <div style={{ fontSize:11, color:"var(--ink-3)" }}>#{a.tag} · {a.cat}</div>
+                    </div>
+                    {badge && <LocBadge {...badge} />}
+                    <span style={{ fontSize:11, fontWeight:500, color:"var(--ink-3)", whiteSpace:"nowrap", textTransform:"capitalize" }}>{a.status}</span>
+                  </label>
+                );
+              })}
               {assetList.length === 0 && <div style={{ fontSize:13, color:"var(--ink-4)", textAlign:"center", padding:"20px 0" }}>No assets match.</div>}
             </div>
           )}
 
-          {/* Step 4 — Team */}
+          {/* ── Step 4: Team ── */}
           {step === 4 && (
-            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              <div style={{ fontSize:13, color:"var(--ink-2)", marginBottom:4 }}>
-                Assign team members to this center.
-                {selPeople.length > 0 && <b style={{ color:"var(--ink)", marginLeft:5 }}>{selPeople.length} selected</b>}
-              </div>
-              <SearchInput value={searchP} onChange={setSearchP} placeholder="Search engineers…" />
-              {peopleList.map(eng => (
-                <label key={eng.id} style={{
-                  display:"flex", alignItems:"center", gap:10, padding:"9px 12px", borderRadius:8,
-                  border:`1px solid ${selPeople.includes(eng.id) ? "var(--brand)" : "var(--line-2)"}`,
-                  background: selPeople.includes(eng.id) ? "var(--brand-dim)" : "var(--panel-2)",
-                  cursor: eng.avail === "On Leave" ? "default" : "pointer", opacity: eng.avail === "On Leave" ? 0.55 : 1, transition:"all .1s",
-                }}>
-                  <input type="checkbox" checked={selPeople.includes(eng.id)} disabled={eng.avail === "On Leave"}
-                    onChange={() => eng.avail !== "On Leave" && toggleP(eng.id)}
-                    style={{ accentColor:"var(--brand)", width:15, height:15, flexShrink:0 }} />
-                  <div style={{
-                    width:32, height:32, borderRadius:8, display:"grid", placeItems:"center", flexShrink:0,
-                    background: selPeople.includes(eng.id) ? "var(--brand)" : "var(--panel-3)",
-                    color: selPeople.includes(eng.id) ? "white" : "var(--ink-2)",
-                    fontSize:11, fontWeight:700,
-                  }}>{eng.initials}</div>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontSize:13, fontWeight:550, color:"var(--ink)" }}>{eng.name}</div>
-                    <div style={{ fontSize:11, color:"var(--ink-3)" }}>{eng.role}</div>
-                  </div>
-                  <span style={{ fontSize:10, fontWeight:500, padding:"2px 7px", borderRadius:4, whiteSpace:"nowrap",
-                    color: AVAIL_C[eng.avail], background:`color-mix(in srgb, ${AVAIL_C[eng.avail]} 12%, transparent)` }}>
-                    {eng.avail}
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                <span style={{ fontSize:13, color:"var(--ink-2)" }}>Assign team members to this center.</span>
+                {selPeople.length > 0 && (
+                  <span style={{ fontSize:12, fontWeight:600, color:"var(--brand)", background:"var(--brand-dim)", padding:"2px 9px", borderRadius:5 }}>
+                    {selPeople.length} selected
                   </span>
-                </label>
-              ))}
+                )}
+              </div>
+              {/* Sub-tabs */}
+              <div style={{ display:"flex", borderBottom:"1px solid var(--line)", marginBottom:4 }}>
+                {(["teams","people"] as const).map(t => (
+                  <button key={t} onClick={() => setTeamTab(t)} style={{
+                    padding:"6px 14px", fontSize:12.5, fontWeight:teamTab === t ? 600 : 400,
+                    color:teamTab === t ? "var(--brand)" : "var(--ink-3)",
+                    background:"none", border:"none", borderBottom:`2px solid ${teamTab === t ? "var(--brand)" : "transparent"}`,
+                    cursor:"pointer", marginBottom:-1,
+                  }}>{t === "teams" ? "Existing teams" : "Individual people"}</button>
+                ))}
+              </div>
+
+              {teamTab === "teams" && (
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {teamsForCity.map(team => {
+                    const isSelected = selTeams.includes(team.id);
+                    const tb = badgeFor(team.city, team.country);
+                    const members = team.memberIds.map(id => MODAL_ENGINEERS.find(e => e.id === id)).filter((x): x is typeof MODAL_ENGINEERS[number] => !!x);
+                    return (
+                      <label key={team.id} style={{
+                        display:"flex", flexDirection:"column", padding:"11px 13px", borderRadius:8, gap:8,
+                        border:`1px solid ${isSelected ? "var(--brand)" : "var(--line-2)"}`,
+                        background: isSelected ? "var(--brand-dim)" : "var(--panel-2)",
+                        cursor:"pointer", transition:"all .1s",
+                      }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:9 }}>
+                          <input type="checkbox" checked={isSelected} onChange={() => toggleT(team.id)}
+                            style={{ accentColor:"var(--brand)", width:15, height:15, flexShrink:0 }} />
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <span style={{ fontSize:13, fontWeight:600, color:"var(--ink)" }}>{team.name}</span>
+                            <span style={{ fontSize:11, color:"var(--ink-3)", marginLeft:6 }}>{members.length} members</span>
+                          </div>
+                          {tb && tb.color !== "var(--ink-3)" && <LocBadge {...tb} />}
+                        </div>
+                        <div style={{ display:"flex", gap:5, paddingLeft:24 }}>
+                          {members.map(m => (
+                            <div key={m.id} title={`${m.name} · ${m.role}`} style={{
+                              width:28, height:28, borderRadius:7, display:"grid", placeItems:"center",
+                              background: isSelected ? "var(--brand)" : "var(--panel-3)",
+                              color: isSelected ? "white" : "var(--ink-2)",
+                              fontSize:9.5, fontWeight:700,
+                            }}>{m.initials}</div>
+                          ))}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+
+              {teamTab === "people" && (
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  <div style={{ display:"flex", gap:8 }}>
+                    <div style={{ flex:1 }}><SearchInput value={searchP} onChange={setSearchP} placeholder="Search engineers…" /></div>
+                    <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)}
+                      style={{ height:32, borderRadius:6, border:"1px solid var(--line-2)", background:"var(--panel-2)", color:"var(--ink)", fontSize:12, padding:"0 8px", flexShrink:0 }}>
+                      {roles.map(r => <option key={r}>{r}</option>)}
+                    </select>
+                  </div>
+                  {peopleList.map(eng => {
+                    const isOnLeave = eng.avail === "On Leave";
+                    const isSelected = selPeople.includes(eng.id);
+                    const pb = badgeFor(eng.city, eng.country);
+                    return (
+                      <label key={eng.id} style={{
+                        display:"flex", alignItems:"center", gap:10, padding:"9px 12px", borderRadius:8,
+                        border:`1px solid ${isSelected ? "var(--brand)" : "var(--line-2)"}`,
+                        background: isSelected ? "var(--brand-dim)" : "var(--panel-2)",
+                        cursor: isOnLeave ? "default" : "pointer", opacity: isOnLeave ? 0.55 : 1, transition:"all .1s",
+                      }}>
+                        <input type="checkbox" checked={isSelected} disabled={isOnLeave}
+                          onChange={() => !isOnLeave && toggleP(eng.id)}
+                          style={{ accentColor:"var(--brand)", width:15, height:15, flexShrink:0 }} />
+                        <div style={{ width:32, height:32, borderRadius:8, display:"grid", placeItems:"center", flexShrink:0,
+                          background: isSelected ? "var(--brand)" : "var(--panel-3)",
+                          color: isSelected ? "white" : "var(--ink-2)", fontSize:11, fontWeight:700 }}>
+                          {eng.initials}
+                        </div>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:13, fontWeight:550, color:"var(--ink)" }}>{eng.name}</div>
+                          <div style={{ fontSize:11, color:"var(--ink-3)" }}>{eng.role}</div>
+                        </div>
+                        {pb && pb.color !== "var(--ink-3)" && <LocBadge {...pb} />}
+                        <span style={{ fontSize:10, fontWeight:500, padding:"2px 7px", borderRadius:4, whiteSpace:"nowrap",
+                          color: AVAIL_C[eng.avail], background:`color-mix(in srgb, ${AVAIL_C[eng.avail]} 12%, transparent)` }}>
+                          {eng.avail}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Step 5: Summary ── */}
+          {step === 5 && (
+            <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+              <div style={{ fontSize:13, color:"var(--ink-2)" }}>Review your selections before creating the center.</div>
+
+              <div style={{ background:"var(--panel-2)", borderRadius:10, padding:"12px 14px", border:"1px solid var(--line-2)" }}>
+                <div style={{ fontSize:10.5, fontWeight:600, color:"var(--ink-4)", textTransform:"uppercase", letterSpacing:".06em", marginBottom:8 }}>Location</div>
+                <div style={{ fontSize:14, fontWeight:650, color:"var(--ink)" }}>{name || "—"}</div>
+                <div style={{ fontSize:12, color:"var(--ink-3)", marginTop:2 }}>{city && country ? `${city}, ${country}` : "—"}</div>
+                {address && <div style={{ fontSize:11.5, color:"var(--ink-4)", marginTop:2 }}>{address}</div>}
+              </div>
+
+              <div style={{ background:"var(--panel-2)", borderRadius:10, padding:"12px 14px", border:"1px solid var(--line-2)" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:selBenches.length ? 8 : 0 }}>
+                  <div style={{ fontSize:10.5, fontWeight:600, color:"var(--ink-4)", textTransform:"uppercase", letterSpacing:".06em" }}>Benches</div>
+                  <span style={{ fontSize:11, color:"var(--ink-3)" }}>{selBenches.length} selected</span>
+                </div>
+                {selBenches.length === 0
+                  ? <div style={{ fontSize:12, color:"var(--ink-4)", marginTop:4 }}>None selected</div>
+                  : selBenches.map(id => {
+                    const b = BENCHES_INITIAL.find(x => x.id === id);
+                    if (!b) return null;
+                    return (
+                      <div key={id} style={{ display:"flex", alignItems:"center", gap:8, padding:"5px 0", borderBottom:"1px solid var(--line)" }}>
+                        <span style={{ width:6, height:6, borderRadius:"50%", background:SC[b.status] || "var(--ink-4)", display:"inline-block", flexShrink:0 }} />
+                        <span style={{ fontSize:12.5, color:"var(--ink)", flex:1 }}>{b.name}</span>
+                        <span style={{ fontSize:11, color:"var(--ink-4)" }}>{b.id}</span>
+                      </div>
+                    );
+                  })
+                }
+              </div>
+
+              <div style={{ background:"var(--panel-2)", borderRadius:10, padding:"12px 14px", border:"1px solid var(--line-2)" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:selAssets.length ? 8 : 0 }}>
+                  <div style={{ fontSize:10.5, fontWeight:600, color:"var(--ink-4)", textTransform:"uppercase", letterSpacing:".06em" }}>Assets</div>
+                  <span style={{ fontSize:11, color:"var(--ink-3)" }}>{selAssets.length} selected</span>
+                </div>
+                {selAssets.length === 0
+                  ? <div style={{ fontSize:12, color:"var(--ink-4)", marginTop:4 }}>None selected</div>
+                  : selAssets.map(tag => {
+                    const a = ASSETS_INITIAL.find((x: Asset) => x.tag === tag);
+                    if (!a) return null;
+                    return (
+                      <div key={tag} style={{ display:"flex", alignItems:"center", gap:8, padding:"5px 0", borderBottom:"1px solid var(--line)" }}>
+                        <span style={{ fontSize:12.5, color:"var(--ink)", flex:1 }}>{a.model}</span>
+                        <span style={{ fontSize:11, color:"var(--ink-4)" }}>#{tag}</span>
+                        <span style={{ fontSize:10, color:"var(--ink-4)" }}>{a.cat}</span>
+                      </div>
+                    );
+                  })
+                }
+              </div>
+
+              <div style={{ background:"var(--panel-2)", borderRadius:10, padding:"12px 14px", border:"1px solid var(--line-2)" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:selPeople.length ? 8 : 0 }}>
+                  <div style={{ fontSize:10.5, fontWeight:600, color:"var(--ink-4)", textTransform:"uppercase", letterSpacing:".06em" }}>Team</div>
+                  <span style={{ fontSize:11, color:"var(--ink-3)" }}>{selPeople.length} members</span>
+                </div>
+                {selPeople.length === 0
+                  ? <div style={{ fontSize:12, color:"var(--ink-4)", marginTop:4 }}>None selected</div>
+                  : selPeople.map(id => {
+                    const e = MODAL_ENGINEERS.find(x => x.id === id);
+                    if (!e) return null;
+                    return (
+                      <div key={id} style={{ display:"flex", alignItems:"center", gap:8, padding:"5px 0", borderBottom:"1px solid var(--line)" }}>
+                        <div style={{ width:24, height:24, borderRadius:6, display:"grid", placeItems:"center", background:"var(--brand-dim)", color:"var(--brand)", fontSize:9, fontWeight:700, flexShrink:0 }}>{e.initials}</div>
+                        <span style={{ fontSize:12.5, color:"var(--ink)", flex:1 }}>{e.name}</span>
+                        <span style={{ fontSize:11, color:"var(--ink-4)" }}>{e.role}</span>
+                        <span style={{ fontSize:10, fontWeight:500, padding:"1px 6px", borderRadius:4, flexShrink:0,
+                          color: AVAIL_C[e.avail], background:`color-mix(in srgb, ${AVAIL_C[e.avail]} 12%, transparent)` }}>{e.avail}</span>
+                      </div>
+                    );
+                  })
+                }
+              </div>
             </div>
           )}
         </div>
@@ -470,14 +697,14 @@ function NewCenterModal({ onClose, onCreate }: {
             {step > 1 ? "← Back" : "Cancel"}
           </button>
           <div style={{ display:"flex", gap:8 }}>
-            {step < 4 && (
-              <button className="to-btn ghost sm" onClick={() => setStep(4)} style={{ color:"var(--ink-3)" }}>
-                Skip to review
+            {step > 1 && step < 5 && (
+              <button className="to-btn ghost sm" onClick={() => setStep(5)} style={{ color:"var(--ink-3)" }}>
+                Skip to summary
               </button>
             )}
-            {step < 4 ? (
+            {step < 5 ? (
               <button className="to-btn primary sm" disabled={step === 1 && !valid1} onClick={() => setStep(s => s + 1)}>
-                Next: {WIZARD_STEPS[step]} →
+                {step < 4 ? `Next: ${WIZARD_STEPS[step]} →` : "Review summary →"}
               </button>
             ) : (
               <button className="to-btn primary sm" disabled={!valid1} onClick={handleCreate}>
