@@ -34,43 +34,54 @@ function BenchTile({ b, onClick }: { b: TestBench; onClick: () => void }) {
     <div
       onClick={onClick}
       style={{
-        background: "var(--panel-2)", border: "1px solid var(--line)",
-        borderTop: `3px solid ${col}`, borderRadius: 8,
-        padding: "11px 12px", cursor: "pointer", transition: "background .12s",
+        background: "var(--panel)",
+        border: "1px solid var(--line-2)",
+        borderRadius: 10,
+        padding: "12px 13px",
+        cursor: "pointer",
+        transition: "box-shadow .15s, transform .15s",
       }}
-      onMouseEnter={e => { e.currentTarget.style.background = "var(--panel-3)"; }}
-      onMouseLeave={e => { e.currentTarget.style.background = "var(--panel-2)"; }}
+      onMouseEnter={e => {
+        e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,.1)";
+        e.currentTarget.style.transform = "translateY(-1px)";
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.boxShadow = "";
+        e.currentTarget.style.transform = "";
+      }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
-        <div style={{ fontFamily: "var(--mono)", fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>{host}</div>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 500, color: col }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: col, display: "inline-block" }} />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+        <div style={{ fontFamily: "var(--mono)", fontSize: 12.5, fontWeight: 700, color: "var(--ink)" }}>{host}</div>
+        <span style={{
+          display: "inline-flex", alignItems: "center", gap: 4,
+          fontSize: 10, fontWeight: 600, letterSpacing: ".03em",
+          color: col,
+          background: `color-mix(in srgb, ${col} 12%, transparent)`,
+          border: `1px solid color-mix(in srgb, ${col} 28%, transparent)`,
+          borderRadius: 5, padding: "2px 7px",
+        }}>
+          <span style={{ width: 5, height: 5, borderRadius: "50%", background: col, display: "inline-block", flexShrink: 0 }} />
           {resolvedStatus(b)}
         </span>
       </div>
-      <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: "var(--ink-3)", marginBottom: 8, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+      <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink-3)", marginBottom: 9, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
         {b.name}
-        {b.hosts.length > 1 && <span style={{ marginLeft: 6, opacity: .6 }}>+{b.hosts.length - 1}</span>}
+        {b.hosts.length > 1 && <span style={{ marginLeft: 5, opacity: .6 }}>+{b.hosts.length - 1}</span>}
       </div>
       {b.telemetry.collectorUp ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink-3)", width: 26 }}>CPU</span>
-            <div style={{ flex: 1, height: 4, borderRadius: 3, background: "var(--panel-3)", overflow: "hidden" }}>
-              <div style={{ width: `${b.telemetry.cpuPct}%`, height: "100%", background: cpuCol, borderRadius: 3 }} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          {([ ["CPU", b.telemetry.cpuPct, cpuCol], ["MEM", b.telemetry.memPct, memCol] ] as [string, number, string][]).map(([label, pct, barCol]) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink-4)", width: 24 }}>{label}</span>
+              <div style={{ flex: 1, height: 4, borderRadius: 3, background: "var(--line-2)", overflow: "hidden" }}>
+                <div style={{ width: `${pct}%`, height: "100%", background: barCol, borderRadius: 3 }} />
+              </div>
+              <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink-3)", width: 26, textAlign: "right" }}>{pct}%</span>
             </div>
-            <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink-2)", width: 26, textAlign: "right" }}>{b.telemetry.cpuPct}%</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink-3)", width: 26 }}>MEM</span>
-            <div style={{ flex: 1, height: 4, borderRadius: 3, background: "var(--panel-3)", overflow: "hidden" }}>
-              <div style={{ width: `${b.telemetry.memPct}%`, height: "100%", background: memCol, borderRadius: 3 }} />
-            </div>
-            <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink-2)", width: 26, textAlign: "right" }}>{b.telemetry.memPct}%</span>
-          </div>
+          ))}
         </div>
       ) : (
-        <div style={{ fontSize: 9.5, color: "var(--ink-4)", fontFamily: "var(--mono)" }}>collector offline</div>
+        <div style={{ fontSize: 10, color: "var(--ink-4)", fontFamily: "var(--mono)" }}>collector offline</div>
       )}
     </div>
   );
