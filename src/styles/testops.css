@@ -227,9 +227,9 @@
 .to-tab.on{color:var(--ink);border-bottom-color:var(--brand);background:var(--brand-dim);font-weight:600}
 
 /* drawer */
-.to-scrim{position:fixed;inset:0;background:rgba(4,5,6,.6);backdrop-filter:blur(2px);z-index:40;opacity:0;pointer-events:none;transition:.2s}
+.to-scrim{position:fixed;inset:0;background:rgba(4,5,6,.6);backdrop-filter:blur(2px);z-index:950;opacity:0;pointer-events:none;transition:.2s}
 .to-scrim.open{opacity:1;pointer-events:auto}
-.to-drawer{position:fixed;top:0;right:0;height:100vh;width:min(560px,94vw);background:var(--bg-2);border-left:1px solid var(--line-2);z-index:50;transform:translateX(100%);transition:transform .26s cubic-bezier(.2,.7,.2,1);display:flex;flex-direction:column;box-shadow:var(--shadow-lg)}
+.to-drawer{position:fixed;top:0;right:0;height:100vh;width:min(560px,94vw);background:var(--panel);border-left:1px solid var(--line-2);z-index:1000;transform:translateX(100%);transition:transform .26s cubic-bezier(.2,.7,.2,1);display:flex;flex-direction:column;box-shadow:var(--shadow-lg)}
 .to-drawer.open{transform:none}
 .to-drawer-h{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:14px}
 .to-drawer-b{padding:20px;overflow-y:auto;flex:1}
@@ -390,7 +390,7 @@
 .to-bench-tile.s-maint { background:var(--low-dim); } .to-bench-tile.s-maint .host { color:var(--low); }
 
 /* Wide drawer for asset form */
-.to-drawer-wide { position:fixed; top:0; right:0; height:100vh; width:min(680px,96vw); background:var(--bg-2); border-left:1px solid var(--line-2); z-index:50; transform:translateX(100%); transition:transform .26s cubic-bezier(.2,.7,.2,1); display:flex; flex-direction:column; box-shadow:var(--shadow-lg); }
+.to-drawer-wide { position:fixed; top:0; right:0; height:100vh; width:min(680px,96vw); background:var(--panel); border-left:1px solid var(--line-2); z-index:1000; transform:translateX(100%); transition:transform .26s cubic-bezier(.2,.7,.2,1); display:flex; flex-direction:column; box-shadow:var(--shadow-lg); }
 .to-drawer-wide.open { transform:none; }
 
 /* Form section headers */
