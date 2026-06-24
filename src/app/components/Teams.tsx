@@ -605,17 +605,15 @@ export function Teams({ addToast }: Props) {
           { label:"Teams",           val:teams.length,     sub:"active",                            color:"var(--brand)" },
           { label:"Centers Covered", val:centersCt,        sub:`of ${TEST_CENTERS.length} total`,   color:"var(--ink)"   },
           { label:"Member Slots",    val:memberSlots,      sub:"across all teams",                  color:"var(--ink)"   },
-        ].map((k) => (
+        ].map((k, i, arr) => (
           <div key={k.label} style={{
             flex:1, minWidth:0,
-            padding: "16px 18px",
-            background: "var(--panel)",
-            borderRadius: 10,
-            border: "1px solid var(--line-2)",
+            padding: "0 18px",
+            borderRight: i < arr.length - 1 ? "1px solid var(--line)" : "none",
           }}>
-            <div style={{ fontSize:11, fontWeight:600, color:"var(--ink-4)", textTransform:"uppercase", letterSpacing:".07em", marginBottom:8 }}>{k.label}</div>
+            <div style={{ fontSize:12, fontWeight:600, color:"var(--ink-4)", textTransform:"uppercase", letterSpacing:".07em", marginBottom:8 }}>{k.label}</div>
             <div style={{ fontWeight:700, fontSize:26, lineHeight:1, color:k.color, fontVariantNumeric:"tabular-nums", letterSpacing:"-.03em" }}>{k.val}</div>
-            <div style={{ fontSize:12, color:"var(--ink-3)", marginTop:5 }}>{k.sub}</div>
+            <div style={{ fontSize:12, fontWeight:500, color:"var(--ink-3)", marginTop:5 }}>{k.sub}</div>
           </div>
         ))}
       </div>

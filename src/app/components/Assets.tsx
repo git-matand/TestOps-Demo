@@ -155,7 +155,7 @@ export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister,
                             {st.l}
                           </span>
                         </td>
-                        <td>{a.assignee ? <span className="to-row" style={{gap:6}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{opacity:.55,flexShrink:0}}><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.3 3.1-6 7-6s7 2.7 7 6"/></svg>{a.assignee}</span> : <span className="to-muted">—</span>}</td>
+                        <td>{a.assignee ? <span className="to-row" style={{gap:6}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{opacity:.55,flexShrink:0}}><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.3 3.1-6 7-6s7 2.7 7 6"/></svg>{a.assignee}</span> : <span className="to-muted">—</span>}</td>
                         <td className="to-muted">{a.location}</td>
                         <td className="to-mono">{a.cost}</td>
                         <td>
