@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Asset, DATA, STATUS_MAP, TEST_CENTERS } from "../data";
 import { SyncModal } from "./SyncModal";
 import { ScanModal } from "./QRModal";
@@ -27,7 +27,9 @@ const TODAY = new Date("2026-06-22");
 const WARN_DATE = new Date("2026-06-22");
 WARN_DATE.setMonth(WARN_DATE.getMonth() + 4);
 
-const LICENSES = [
+type License = { id: string; software: string; vendor: string; total: number; assigned: number; expiry: string; centerId: string };
+
+const INITIAL_LICENSES: License[] = [
   { id:"L1", software:"CANoe 17",      vendor:"Vector Informatik", total:5, assigned:4, expiry:"2026-12-31", centerId:"TC-MUC" },
   { id:"L2", software:"MATLAB R2024b", vendor:"MathWorks",         total:3, assigned:2, expiry:"2026-09-30", centerId:"TC-STR" },
   { id:"L3", software:"CANdb++ 8",     vendor:"Vector Informatik", total:2, assigned:2, expiry:"2027-03-15", centerId:"TC-WAW" },
@@ -40,6 +42,105 @@ function expiryColor(d: string) {
   return "var(--ok)";
 }
 
+// ─── License creation modal ───────────────────────────────────────────────────
+const LBL: React.CSSProperties = { fontSize:11, fontWeight:600, color:"var(--ink-3)", textTransform:"uppercase", letterSpacing:".06em", display:"block", marginBottom:6 };
+
+function LicenseModal({ onClose, onSave }: { onClose: () => void; onSave: (l: License) => void }) {
+  const [software, setSoftware] = useState("");
+  const [vendor, setVendor]     = useState("");
+  const [total, setTotal]       = useState("1");
+  const [assigned, setAssigned] = useState("0");
+  const [expiry, setExpiry]     = useState("");
+  const [centerId, setCenterId] = useState("");
+
+  const canSave = software.trim().length > 0 && Number(total) >= 1 && expiry.length > 0;
+
+  function handleSave() {
+    if (!canSave) return;
+    onSave({ id:`L${Date.now()}`, software:software.trim(), vendor:vendor.trim(),
+      total:Math.max(1, parseInt(total)||1), assigned:Math.max(0, parseInt(assigned)||0),
+      expiry, centerId });
+  }
+
+  const INPUT: React.CSSProperties = { width:"100%", boxSizing:"border-box" as const };
+
+  return (
+    <div style={{
+      position:"fixed", inset:0, background:"rgba(0,0,0,.48)", backdropFilter:"blur(4px)",
+      display:"flex", alignItems:"center", justifyContent:"center", zIndex:1100, padding:20,
+    }} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{
+        background:"var(--panel)", borderRadius:14, border:"1px solid var(--line)",
+        width:520, maxWidth:"100%", boxShadow:"0 24px 64px rgba(0,0,0,.35)",
+      }}>
+        {/* Header */}
+        <div style={{ padding:"18px 22px", borderBottom:"1px solid var(--line)", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div>
+            <div style={{ fontSize:16, fontWeight:660, color:"var(--ink)" }}>Add License</div>
+            <div style={{ fontSize:12, color:"var(--ink-4)", marginTop:2 }}>Register a new software license</div>
+          </div>
+          <button className="to-iconbtn" onClick={onClose} style={{ background:"var(--panel-2)" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        {/* Body */}
+        <div style={{ padding:"20px 22px", display:"flex", flexDirection:"column", gap:14 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            <div>
+              <label style={LBL}>Software Name *</label>
+              <input className="to-input" value={software} onChange={e => setSoftware(e.target.value)}
+                placeholder="e.g. CANoe 17" style={INPUT} autoFocus />
+            </div>
+            <div>
+              <label style={LBL}>Vendor</label>
+              <input className="to-input" value={vendor} onChange={e => setVendor(e.target.value)}
+                placeholder="e.g. Vector Informatik" style={INPUT} />
+            </div>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12 }}>
+            <div>
+              <label style={LBL}>Total Seats *</label>
+              <input className="to-input" type="number" min="1" value={total} onChange={e => setTotal(e.target.value)} style={INPUT} />
+            </div>
+            <div>
+              <label style={LBL}>Assigned</label>
+              <input className="to-input" type="number" min="0" value={assigned} onChange={e => setAssigned(e.target.value)} style={INPUT} />
+            </div>
+            <div>
+              <label style={LBL}>Expiry Date *</label>
+              <input className="to-input" type="date" value={expiry} onChange={e => setExpiry(e.target.value)} style={INPUT} />
+            </div>
+          </div>
+          <div>
+            <label style={LBL}>Test Center</label>
+            <select value={centerId} onChange={e => setCenterId(e.target.value)} style={{
+              width:"100%", padding:"9px 32px 9px 12px", border:"1px solid var(--line-2)", borderRadius:8,
+              background:"var(--panel)", color:"var(--ink)", fontSize:13, cursor:"pointer", outline:"none",
+              appearance:"none", boxSizing:"border-box",
+              backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+              backgroundRepeat:"no-repeat", backgroundPosition:"right 10px center",
+            }}>
+              <option value="">— Not assigned —</option>
+              {TEST_CENTERS.map(c => <option key={c.id} value={c.id}>{c.name} · {c.city}</option>)}
+            </select>
+          </div>
+        </div>
+        {/* Footer */}
+        <div style={{ padding:"14px 22px", borderTop:"1px solid var(--line)", display:"flex", justifyContent:"flex-end", gap:8 }}>
+          <button className="to-btn ghost sm" onClick={onClose}>Cancel</button>
+          <button className="to-btn primary sm" onClick={handleSave} disabled={!canSave} style={{ opacity:canSave ? 1 : 0.45 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+            </svg>
+            Register license
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister, onDelete, onClone, onEdit, addToast }: Props) {
   const [tab, setTab] = useState("registry");
   const [filter, setFilter] = useState("all");
@@ -48,6 +149,8 @@ export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister,
   const [syncOpen, setSyncOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [reassignTag, setReassignTag] = useState<string | null>(null);
+  const [licenses, setLicenses] = useState<License[]>(INITIAL_LICENSES);
+  const [licModalOpen, setLicModalOpen] = useState(false);
   const [targetCenter, setTargetCenter] = useState("");
 
   const visible = assets.filter(a => {
@@ -275,7 +378,7 @@ export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister,
         <div className="to-panel">
           <div className="to-panel-h">
             <span className="to-eyebrow">Software Licenses</span>
-            <button className="to-btn accent sm" onClick={() => addToast("Add license", "Opening license registration…", "info")}>
+            <button className="to-btn accent sm" onClick={() => setLicModalOpen(true)}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><path d="M12 5v14M5 12h14"/></svg>
               Add license
             </button>
@@ -296,7 +399,7 @@ export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister,
                 </tr>
               </thead>
               <tbody>
-                {LICENSES.map(l => {
+                {licenses.map(l => {
                   const available = l.total - l.assigned;
                   const pct = Math.round(l.assigned / l.total * 100);
                   const availColor = available === 0 ? "var(--bad)" : available === 1 ? "var(--warn)" : "var(--ok)";
@@ -369,9 +472,9 @@ export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister,
           </div>
           <div style={{padding:"10px 16px",borderTop:"1px solid var(--line)",display:"flex",gap:16}}>
             {[
-              { label:"Total seats", val: LICENSES.reduce((s,l)=>s+l.total,0), color:"var(--ink)" },
-              { label:"In use",      val: LICENSES.reduce((s,l)=>s+l.assigned,0), color:"var(--brand)" },
-              { label:"Available",   val: LICENSES.reduce((s,l)=>s+(l.total-l.assigned),0), color:"var(--ok)" },
+              { label:"Total seats", val: licenses.reduce((s,l)=>s+l.total,0), color:"var(--ink)" },
+              { label:"In use",      val: licenses.reduce((s,l)=>s+l.assigned,0), color:"var(--brand)" },
+              { label:"Available",   val: licenses.reduce((s,l)=>s+(l.total-l.assigned),0), color:"var(--ok)" },
             ].map(k => (
               <span key={k.label} style={{fontSize:12,color:"var(--ink-4)"}}>
                 {k.label}: <b style={{color:k.color}}>{k.val}</b>
@@ -398,6 +501,12 @@ export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister,
 
       <SyncModal open={syncOpen} onClose={() => setSyncOpen(false)} onSynced={() => addToast("Sync complete","3 assets imported · 2 updated · 2 conflicts flagged")} />
       <ScanModal open={scanOpen} onClose={() => setScanOpen(false)} onScanned={tag => { setScanOpen(false); onOpenAsset(tag); }} />
+      {licModalOpen && (
+        <LicenseModal
+          onClose={() => setLicModalOpen(false)}
+          onSave={l => { setLicenses(prev => [...prev, l]); addToast("License added", l.software, "ok"); setLicModalOpen(false); }}
+        />
+      )}
 
       {reassignTag && (() => {
         const asset = assets.find(a => a.tag === reassignTag);

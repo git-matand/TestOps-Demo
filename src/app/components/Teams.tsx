@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { TEST_CENTERS } from "../data";
+import { TEST_CENTERS, BENCHES_INITIAL } from "../data";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Avail = "Available" | "Busy" | "On Leave";
@@ -9,8 +9,8 @@ interface Engineer {
   role: string; specialization: string; availability: Avail;
 }
 interface Member { engineerId: string; teamRole: string }
-interface Team   { id: string; name: string; centerId: string; members: Member[]; description: string; createdAt: string }
-interface Draft  { name: string; centerId: string; description: string; members: Record<string, string> }
+interface Team   { id: string; name: string; centerId: string; members: Member[]; description: string; createdAt: string; benchIds: string[] }
+interface Draft  { name: string; centerId: string; description: string; members: Record<string, string>; benchIds: string[] }
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const ENGINEERS: Engineer[] = [
@@ -28,18 +28,21 @@ const INITIAL_TEAMS: Team[] = [
     members:[{engineerId:"E1",teamRole:"Lead"},{engineerId:"E2",teamRole:"Engineer"},{engineerId:"E3",teamRole:"Tester"}],
     description:"CAN/LIN protocol stack regression and cross-domain integration campaigns.",
     createdAt:"Mar 2024",
+    benchIds:["TB-178","TB-205"],
   },
   {
     id:"TM-002", name:"Firmware Validation", centerId:"TC-STR",
     members:[{engineerId:"E4",teamRole:"Lead"},{engineerId:"E2",teamRole:"Reviewer"},{engineerId:"E3",teamRole:"Tester"},{engineerId:"E5",teamRole:"Support"}],
     description:"OTA firmware update validation, boot stress testing and power cycle endurance.",
     createdAt:"Sep 2024",
+    benchIds:["TB-146","TB-112","TB-156"],
   },
   {
     id:"TM-003", name:"Platform DevOps", centerId:"TC-WAW",
     members:[{engineerId:"E4",teamRole:"Lead"},{engineerId:"E6",teamRole:"Engineer"}],
     description:"CI/CD pipeline management, Jenkins integration and RF antenna lab operations.",
     createdAt:"Jan 2025",
+    benchIds:["TB-084","TB-231"],
   },
 ];
 
@@ -96,6 +99,26 @@ function TeamCard({ team, onEdit }: { team: Team; onEdit: () => void }) {
           <div style={{ flex:1, minWidth:0 }}>
             <div style={{ fontSize:15.5, fontWeight:650, color:"var(--ink)", lineHeight:1.25 }}>{team.name}</div>
             <div style={{ fontSize:13, color:"var(--ink-3)", marginTop:4, lineHeight:1.5 }}>{team.description}</div>
+            {team.benchIds && team.benchIds.length > 0 && (
+              <div style={{ display:"flex", gap:5, flexWrap:"wrap", marginTop:8 }}>
+                {team.benchIds.map(bid => {
+                  const bench = BENCHES_INITIAL.find(b => b.id === bid);
+                  if (!bench) return null;
+                  const stColor = bench.status === "Up" ? "var(--ok)" : bench.status === "Down" ? "var(--bad)" : bench.status === "Degraded" ? "var(--warn)" : "var(--ink-4)";
+                  return (
+                    <span key={bid} title={bench.name} style={{
+                      display:"inline-flex", alignItems:"center", gap:4,
+                      fontSize:11, padding:"2px 7px", borderRadius:5,
+                      background:"var(--panel-2)", color:"var(--ink-3)",
+                      fontFamily:"var(--mono)", border:"1px solid var(--line)",
+                    }}>
+                      <span style={{ width:5, height:5, borderRadius:"50%", background:stColor, flexShrink:0 }} />
+                      {bench.hosts[0]?.hostId}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
           </div>
           <span style={{
             flexShrink:0, padding:"3px 10px", borderRadius:12,
@@ -214,7 +237,7 @@ function EngRow({
 }
 
 // ─── Builder modal ────────────────────────────────────────────────────────────
-const EMPTY_DRAFT: Draft = { name:"", centerId:"", description:"", members:{} };
+const EMPTY_DRAFT: Draft = { name:"", centerId:"", description:"", members:{}, benchIds:[] };
 
 function Builder({
   initial, onSave, onClose,
@@ -247,6 +270,20 @@ function Builder({
   const memberCount = Object.keys(draft.members).length;
   const ctr = CTR[draft.centerId] ?? CTR[""];
   const canSave = draft.name.trim().length > 0 && memberCount > 0;
+
+  const centerBenches = useMemo(() => {
+    if (!draft.centerId) return [];
+    const center = TEST_CENTERS.find(c => c.id === draft.centerId);
+    if (!center) return [];
+    return BENCHES_INITIAL.filter(b => center.benchIds.includes(b.id));
+  }, [draft.centerId]);
+
+  function toggleBench(id: string) {
+    setDraft(d => ({
+      ...d,
+      benchIds: d.benchIds.includes(id) ? d.benchIds.filter(x => x !== id) : [...d.benchIds, id],
+    }));
+  }
 
   return (
     <div style={{
@@ -352,6 +389,53 @@ function Builder({
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* Bench assignment */}
+          <div style={{ marginBottom:22 }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+              <label style={{ fontSize:11, fontWeight:600, color:"var(--ink-3)", textTransform:"uppercase", letterSpacing:".06em" }}>
+                Assign Benches
+              </label>
+              {draft.benchIds.length > 0 && (
+                <span style={{ fontSize:11, color:"var(--ink-4)" }}>{draft.benchIds.length} selected</span>
+              )}
+            </div>
+            {centerBenches.length === 0 ? (
+              <div style={{
+                padding:"12px 14px", borderRadius:8, background:"var(--panel-2)",
+                fontSize:12, color:"var(--ink-4)", textAlign:"center",
+                border:"1px solid var(--line)",
+              }}>
+                {draft.centerId ? "No benches found for this center" : "Select a Test Center first to assign benches"}
+              </div>
+            ) : (
+              <div style={{ border:"1px solid var(--line-2)", borderRadius:8, overflow:"hidden" }}>
+                {centerBenches.map((b, i) => {
+                  const checked = draft.benchIds.includes(b.id);
+                  const stColor = b.status === "Up" ? "var(--ok)" : b.status === "Down" ? "var(--bad)" : b.status === "Degraded" ? "var(--warn)" : "var(--ink-4)";
+                  return (
+                    <div key={b.id}
+                      style={{
+                        display:"flex", alignItems:"center", gap:10, padding:"9px 12px",
+                        borderBottom: i < centerBenches.length - 1 ? "1px solid var(--line)" : "none",
+                        background: checked ? "rgba(94,106,210,.04)" : undefined,
+                        cursor:"pointer", transition:"background .1s",
+                      }}
+                      onClick={() => toggleBench(b.id)}
+                    >
+                      <input type="checkbox" checked={checked} onChange={() => {}} onClick={e => e.stopPropagation()}
+                        style={{ flexShrink:0, accentColor:"var(--brand)", width:14, height:14, cursor:"pointer" }} />
+                      <span style={{ fontFamily:"var(--mono)", fontSize:12, color:"var(--ink-2)", minWidth:32 }}>
+                        {b.hosts[0]?.hostId}
+                      </span>
+                      <span style={{ flex:1, fontSize:12.5, color:"var(--ink)", fontWeight:500 }}>{b.name}</span>
+                      <span style={{ width:6, height:6, borderRadius:"50%", background:stColor, flexShrink:0 }} />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Engineer roster */}
@@ -541,6 +625,7 @@ export function Teams({ addToast }: Props) {
         centerId: editingTeam.centerId,
         description: editingTeam.description,
         members: Object.fromEntries(editingTeam.members.map(m => [m.engineerId, m.teamRole])),
+        benchIds: editingTeam.benchIds ?? [],
       }
     : EMPTY_DRAFT;
 
@@ -552,7 +637,7 @@ export function Teams({ addToast }: Props) {
     const members = Object.entries(draft.members).map(([engineerId, teamRole]) => ({ engineerId, teamRole }));
     if (editId) {
       setTeams(prev => prev.map(t => t.id === editId
-        ? { ...t, name: draft.name, centerId: draft.centerId, description: draft.description, members }
+        ? { ...t, name: draft.name, centerId: draft.centerId, description: draft.description, members, benchIds: draft.benchIds }
         : t));
       addToast("Team updated", `${draft.name} saved`, "ok");
     } else {
@@ -560,6 +645,7 @@ export function Teams({ addToast }: Props) {
       setTeams(prev => [...prev, {
         id, name: draft.name, centerId: draft.centerId,
         description: draft.description, members, createdAt: "Jun 2026",
+        benchIds: draft.benchIds,
       }]);
       addToast("Team created", `${draft.name} is ready`, "ok");
     }
