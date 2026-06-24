@@ -88,18 +88,18 @@ function TeamCard({ team, onEdit }: { team: Team; onEdit: () => void }) {
   return (
     <div style={{
       background:"var(--panel)", borderRadius:12, border:"1px solid var(--line-2)",
-      display:"flex", flexDirection:"column",
+      display:"flex", flexDirection:"column", height:"100%",
     }}>
       {/* Header */}
       <div style={{ padding:"16px 18px 12px", borderBottom:"1px solid var(--line)" }}>
         <div style={{ display:"flex", alignItems:"flex-start", gap:10, marginBottom:6 }}>
           <div style={{ flex:1, minWidth:0 }}>
             <div style={{ fontSize:15.5, fontWeight:650, color:"var(--ink)", lineHeight:1.25 }}>{team.name}</div>
-            <div style={{ fontSize:11.5, color:"var(--ink-3)", marginTop:3, lineHeight:1.45 }}>{team.description}</div>
+            <div style={{ fontSize:13, color:"var(--ink-3)", marginTop:4, lineHeight:1.5 }}>{team.description}</div>
           </div>
           <span style={{
             flexShrink:0, padding:"3px 10px", borderRadius:12,
-            fontSize:11, fontWeight:600, background:c.bg, color:c.color,
+            fontSize:12, fontWeight:600, background:c.bg, color:c.color,
             whiteSpace:"nowrap",
           }}>
             {c.name !== "Unassigned" ? (
@@ -122,11 +122,11 @@ function TeamCard({ team, onEdit }: { team: Team; onEdit: () => void }) {
             }}>
               <Av initials={m.eng.initials} size={28} />
               <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontSize:12.5, fontWeight:550, color:"var(--ink)" }}>{m.eng.name}</div>
-                <div style={{ fontSize:10.5, color:"var(--ink-4)", marginTop:1 }}>{m.eng.specialization}</div>
+                <div style={{ fontSize:13, fontWeight:600, color:"var(--ink)" }}>{m.eng.name}</div>
+                <div style={{ fontSize:12, fontWeight:500, color:"var(--ink-3)", marginTop:1 }}>{m.eng.specialization}</div>
               </div>
               <span style={{
-                fontSize:10.5, padding:"1.5px 7px", borderRadius:4,
+                fontSize:12, padding:"2px 8px", borderRadius:4,
                 background:"var(--panel-2)", color:"var(--ink-3)", fontWeight:500,
               }}>
                 {m.teamRole}
@@ -145,7 +145,7 @@ function TeamCard({ team, onEdit }: { team: Team; onEdit: () => void }) {
         padding:"10px 18px", borderTop:"1px solid var(--line)",
         display:"flex", alignItems:"center", justifyContent:"space-between",
       }}>
-        <span style={{ fontSize:11, color:"var(--ink-4)" }}>
+        <span style={{ fontSize:12.5, fontWeight:500, color:"var(--ink-3)" }}>
           {members.length} member{members.length !== 1 ? "s" : ""} · Since {team.createdAt}
         </span>
         <button className="to-btn ghost sm" onClick={onEdit}>Edit team</button>
@@ -529,7 +529,9 @@ export function Teams({ addToast }: Props) {
   const [teams, setTeams] = useState<Team[]>(INITIAL_TEAMS);
   const [builderOpen, setBuilderOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [ctrFilter, setCtrFilter] = useState<string>("all");
+  const [ctrFilters, setCtrFilters] = useState<string[]>([]);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const toggleCtr = (id: string) => setCtrFilters(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
 
   const editingTeam = editId ? teams.find(t => t.id === editId) : null;
 
@@ -564,9 +566,9 @@ export function Teams({ addToast }: Props) {
     closeBuilder();
   }
 
-  const visibleTeams = ctrFilter === "all"
+  const visibleTeams = ctrFilters.length === 0
     ? teams
-    : teams.filter(t => t.centerId === ctrFilter);
+    : teams.filter(t => ctrFilters.includes(t.centerId));
 
   // Summary stats
   const availableCt = ENGINEERS.filter(e => e.availability === "Available").length;
@@ -596,60 +598,95 @@ export function Teams({ addToast }: Props) {
       </div>
 
       {/* ── Summary KPI row ─────────────────────────────────────────────── */}
-      <div style={{ display:"flex", gap:10, marginBottom:20 }}>
+      <div style={{ display:"flex", gap:12, marginBottom:24 }}>
         {[
-          { label:"Engineers",       val:ENGINEERS.length, sub:"registered",           color:"var(--ink)"   },
-          { label:"Available Now",   val:availableCt,      sub:"ready for assignment",  color:"var(--ok)"    },
-          { label:"Teams",           val:teams.length,     sub:"active",                color:"var(--brand)" },
-          { label:"Centers Covered", val:centersCt,        sub:`of ${TEST_CENTERS.length} total`, color:"var(--ink)" },
-          { label:"Member Slots",    val:memberSlots,      sub:"across all teams",      color:"var(--ink)"   },
-        ].map(k => (
-          <div key={k.label} style={{ flex:1, minWidth:0 }}>
-            <div className="to-kpi" style={{ padding:"12px 14px", height:"100%", boxSizing:"border-box" }}>
-              <div className="lab">{k.label}</div>
-              <div className="val" style={{ color:k.color }}>{k.val}</div>
-              <div style={{ fontSize:10, color:"var(--ink-4)", marginTop:3, lineHeight:1.3 }}>{k.sub}</div>
-            </div>
+          { label:"Engineers",       val:ENGINEERS.length, sub:"registered",                        color:"var(--ink)"   },
+          { label:"Available Now",   val:availableCt,      sub:"ready for assignment",              color:"var(--ok)"    },
+          { label:"Teams",           val:teams.length,     sub:"active",                            color:"var(--brand)" },
+          { label:"Centers Covered", val:centersCt,        sub:`of ${TEST_CENTERS.length} total`,   color:"var(--ink)"   },
+          { label:"Member Slots",    val:memberSlots,      sub:"across all teams",                  color:"var(--ink)"   },
+        ].map((k) => (
+          <div key={k.label} style={{
+            flex:1, minWidth:0,
+            padding: "16px 18px",
+            background: "var(--panel)",
+            borderRadius: 10,
+            border: "1px solid var(--line-2)",
+          }}>
+            <div style={{ fontSize:11, fontWeight:600, color:"var(--ink-4)", textTransform:"uppercase", letterSpacing:".07em", marginBottom:8 }}>{k.label}</div>
+            <div style={{ fontWeight:700, fontSize:26, lineHeight:1, color:k.color, fontVariantNumeric:"tabular-nums", letterSpacing:"-.03em" }}>{k.val}</div>
+            <div style={{ fontSize:12, color:"var(--ink-3)", marginTop:5 }}>{k.sub}</div>
           </div>
         ))}
       </div>
 
       {/* ── Center filter ────────────────────────────────────────────────── */}
-      <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:18 }}>
-        <span style={{ fontSize:11, color:"var(--ink-4)", fontWeight:500, textTransform:"uppercase", letterSpacing:".07em" }}>
-          Center
-        </span>
-        {[{ id:"all", label:"All" }, ...TEST_CENTERS.map(c => ({ id:c.id, label:c.city }))].map(f => {
-          const active = ctrFilter === f.id;
-          const fc = f.id !== "all" ? CTR[f.id] : null;
-          return (
-            <button
-              key={f.id}
-              onClick={() => setCtrFilter(f.id)}
-              style={{
-                display:"inline-flex", alignItems:"center", gap:6,
-                padding:"4px 12px", borderRadius:16,
-                border: active ? "1.5px solid var(--brand)" : "1.5px solid var(--line-2)",
-                background: active ? "var(--brand-dim)" : "var(--panel-2)",
-                color: active ? "var(--brand)" : "var(--ink-3)",
-                fontSize:12, fontWeight: active ? 600 : 400,
-                cursor:"pointer", transition:"all .12s",
-              }}
-            >
-              {fc && (
-                <span style={{ width:6, height:6, borderRadius:"50%", background:fc.color, display:"inline-block" }} />
-              )}
-              {f.label}
-            </button>
-          );
-        })}
+      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:18 }}>
+        <span style={{ fontSize:12, color:"var(--ink-4)", fontWeight:500 }}>Center</span>
+        <div style={{ position:"relative" }}>
+          {filterOpen && (
+            <div style={{ position:"fixed", inset:0, zIndex:9 }} onClick={() => setFilterOpen(false)} />
+          )}
+          <button
+            onClick={() => setFilterOpen(o => !o)}
+            style={{
+              display:"inline-flex", alignItems:"center", gap:8,
+              height:32, padding:"0 32px 0 12px", borderRadius:8,
+              border:"1px solid var(--line-2)", background:"var(--panel)",
+              color:"var(--ink)", fontSize:13, cursor:"pointer",
+              backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+              backgroundRepeat:"no-repeat", backgroundPosition:"right 10px center",
+            }}
+          >
+            {ctrFilters.length === 0
+              ? "All Centers"
+              : ctrFilters.map(id => TEST_CENTERS.find(c => c.id === id)?.city).join(", ")}
+            {ctrFilters.length > 0 && (
+              <span style={{ background:"var(--brand)", color:"#fff", borderRadius:10, fontSize:10, fontWeight:700, padding:"1px 5px", marginLeft:2 }}>
+                {ctrFilters.length}
+              </span>
+            )}
+          </button>
+          {filterOpen && (
+            <div style={{
+              position:"absolute", top:"calc(100% + 4px)", left:0, zIndex:10,
+              background:"var(--panel)", border:"1px solid var(--line-2)", borderRadius:8,
+              boxShadow:"0 8px 24px rgba(0,0,0,.12)", padding:6, minWidth:180,
+            }}>
+              <label
+                style={{ display:"flex", alignItems:"center", gap:9, padding:"7px 10px", borderRadius:6, cursor:"pointer", transition:"background .1s" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "var(--panel-2)")}
+                onMouseLeave={e => (e.currentTarget.style.background = "")}
+              >
+                <input type="checkbox" checked={ctrFilters.length === 0} onChange={() => setCtrFilters([])}
+                  style={{ accentColor:"var(--brand)", width:14, height:14, flexShrink:0 }} />
+                <span style={{ fontSize:13, fontWeight:500 }}>All Centers</span>
+              </label>
+              {TEST_CENTERS.map(c => {
+                const ctr = CTR[c.id] ?? CTR[""];
+                return (
+                  <label key={c.id}
+                    style={{ display:"flex", alignItems:"center", gap:9, padding:"7px 10px", borderRadius:6, cursor:"pointer", transition:"background .1s" }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "var(--panel-2)")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "")}
+                  >
+                    <input type="checkbox" checked={ctrFilters.includes(c.id)} onChange={() => toggleCtr(c.id)}
+                      style={{ accentColor:"var(--brand)", width:14, height:14, flexShrink:0 }} />
+                    <span style={{ width:8, height:8, borderRadius:"50%", background:ctr.color, flexShrink:0 }} />
+                    <span style={{ fontSize:13 }}>{c.city}</span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── Team cards grid ─────────────────────────────────────────────── */}
       {visibleTeams.length > 0 ? (
-        <div className="to-grid to-g12" style={{ marginBottom:24 }}>
+        <div className="to-grid to-g12" style={{ marginBottom:24, alignItems:"stretch" }}>
           {visibleTeams.map(t => (
-            <div key={t.id} className="to-s6">
+            <div key={t.id} className="to-s6" style={{ display:"flex" }}>
               <TeamCard team={t} onEdit={() => openEdit(t.id)} />
             </div>
           ))}
