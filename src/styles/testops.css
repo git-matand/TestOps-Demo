@@ -343,6 +343,11 @@
 .to-field label{font-family:var(--ui);font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:var(--ink-3);font-weight:510}
 .to-field input,.to-field select,.to-field textarea{border-radius:6px;border:1px solid var(--line-2);background:var(--panel-2);color:var(--ink);font-family:var(--ui);font-size:13px;padding:8px 11px}
 .to-field input:focus,.to-field select:focus,.to-field textarea:focus{outline:none;border-color:var(--brand-cta);box-shadow:0 0 0 3px var(--brand-dim)}
+.to-field input::placeholder,.to-field textarea::placeholder{color:var(--ink-3)}
+.to-field select{-webkit-appearance:none;appearance:none;padding-right:32px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;cursor:pointer}
+.to-input{border-radius:6px;border:1px solid var(--line-2);background:var(--panel-2);color:var(--ink);font-family:var(--ui);font-size:13px;padding:8px 11px;outline:none;transition:border-color .12s,box-shadow .12s}
+.to-input::placeholder{color:var(--ink-3)}
+.to-input:focus{border-color:var(--brand-cta);box-shadow:0 0 0 3px var(--brand-dim)}
 .to-field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .to-legend{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--ui);font-size:11px;color:var(--ink-3)}
 .to-legend span{display:inline-flex;align-items:center;gap:6px}

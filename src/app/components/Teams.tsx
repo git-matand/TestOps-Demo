@@ -200,8 +200,10 @@ function EngRow({
           style={{
             flexShrink:0, fontSize:11.5, borderRadius:6,
             border:"1px solid var(--line-2)",
-            padding:"4px 24px 4px 8px", background:"var(--panel)", color:"var(--ink)",
-            cursor:"pointer", outline:"none", appearance:"auto",
+            padding:"4px 32px 4px 8px", background:"var(--panel)", color:"var(--ink)",
+            cursor:"pointer", outline:"none", appearance:"none",
+            backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+            backgroundRepeat:"no-repeat", backgroundPosition:"right 8px center",
           }}
         >
           {TEAM_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
@@ -335,12 +337,13 @@ function Builder({
                 value={draft.centerId}
                 onChange={e => setDraft(d => ({ ...d, centerId:e.target.value }))}
                 style={{
-                  width:"100%", padding:`9px 12px 9px ${draft.centerId ? "28px" : "12px"}`,
+                  width:"100%", padding:`9px 32px 9px ${draft.centerId ? "28px" : "12px"}`,
                   border:"1px solid var(--line-2)", borderRadius:8,
                   background:"var(--panel)", color:"var(--ink)", fontSize:13,
-                  cursor:"pointer", outline:"none", appearance:"auto",
-                  boxSizing:"border-box",
-                  transition:"border-color .12s",
+                  cursor:"pointer", outline:"none", appearance:"none",
+                  boxSizing:"border-box", transition:"border-color .12s",
+                  backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                  backgroundRepeat:"no-repeat", backgroundPosition:"right 10px center",
                 }}
               >
                 <option value="">— No center assigned —</option>

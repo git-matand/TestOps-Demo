@@ -96,6 +96,26 @@ export function BenchDetail({ bench, assets, onBack, onOpenAsset, onEdit, addToa
 
   return (
     <div className="to-screen" style={{ padding: 0 }}>
+      {/* Breadcrumb */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "22px 22px 0" }}>
+        <button
+          onClick={onBack}
+          style={{
+            display: "flex", alignItems: "center", gap: 5,
+            height: 30, padding: "0 10px", borderRadius: 6,
+            border: "1px solid var(--line-2)", background: "var(--panel-2)",
+            color: "var(--ink-2)", fontSize: 12.5, cursor: "pointer",
+            transition: "background .1s",
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = "var(--panel-3)")}
+          onMouseLeave={e => (e.currentTarget.style.background = "var(--panel-2)")}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          Test Benches
+        </button>
+        <span style={{ color: "var(--ink-4)" }}>/</span>
+        <span style={{ fontSize: 13, color: "var(--ink-2)" }}>{bench.name}</span>
+      </div>
       {/* Sticky detail header */}
       <div className="to-bench-detail-header">
         <div className="to-row to-between" style={{ flexWrap: "wrap", gap: 12, alignItems: "flex-start" }}>
@@ -161,7 +181,7 @@ export function BenchDetail({ bench, assets, onBack, onOpenAsset, onEdit, addToa
             <select
               value={timeRange}
               onChange={e => setTimeRange(e.target.value)}
-              style={{ background: "var(--panel-3)", border: "1px solid var(--line-2)", borderRadius: 6, color: "var(--ink)", fontSize: 12, padding: "4px 8px" }}
+              style={{ background: "var(--panel-3)", border: "1px solid var(--line-2)", borderRadius: 6, color: "var(--ink)", fontSize: 12, padding: "4px 28px 4px 8px", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center" }}
             >
               {TIME_RANGES.map(r => <option key={r}>{r}</option>)}
             </select>
@@ -462,7 +482,7 @@ export function BenchDetail({ bench, assets, onBack, onOpenAsset, onEdit, addToa
                 <select
                   value={compareBenchId}
                   onChange={e => setCompareBenchId(e.target.value)}
-                  style={{ height: 28, borderRadius: 6, border: "1px solid var(--line-2)", background: "var(--panel-2)", color: compareBenchId ? "var(--ink)" : "var(--ink-3)", fontFamily: "var(--mono)", fontSize: 11, padding: "0 8px" }}
+                  style={{ height: 28, borderRadius: 6, border: "1px solid var(--line-2)", background: "var(--panel-2)", color: compareBenchId ? "var(--ink)" : "var(--ink-3)", fontFamily: "var(--mono)", fontSize: 11, padding: "0 28px 0 8px", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center" }}
                 >
                   <option value="">— none —</option>
                   {BENCHES_INITIAL.filter(b => b.id !== bench.id && b.telemetry.collectorUp).map(b => (

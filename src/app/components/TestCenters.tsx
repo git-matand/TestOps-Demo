@@ -475,7 +475,7 @@ function NewCenterModal({ onClose, onCreate }: {
               <div style={{ display:"flex", gap:8, marginBottom:0 }}>
                 <div style={{ flex:1 }}><SearchInput value={searchA} onChange={setSearchA} placeholder="Search assets…" /></div>
                 <select value={catFilter} onChange={e => setCatFilter(e.target.value)}
-                  style={{ height:32, borderRadius:6, border:"1px solid var(--line-2)", background:"var(--panel-2)", color:"var(--ink)", fontSize:12, padding:"0 8px", flexShrink:0 }}>
+                  style={{ height:32, borderRadius:6, border:"1px solid var(--line-2)", background:"var(--panel-2)", color:"var(--ink)", fontSize:12, padding:"0 32px 0 10px", flexShrink:0, appearance:"none", backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat:"no-repeat", backgroundPosition:"right 10px center" }}>
                   {assetCats.map(c => <option key={c}>{c}</option>)}
                 </select>
               </div>
@@ -571,7 +571,7 @@ function NewCenterModal({ onClose, onCreate }: {
                   <div style={{ display:"flex", gap:8 }}>
                     <div style={{ flex:1 }}><SearchInput value={searchP} onChange={setSearchP} placeholder="Search engineers…" /></div>
                     <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)}
-                      style={{ height:32, borderRadius:6, border:"1px solid var(--line-2)", background:"var(--panel-2)", color:"var(--ink)", fontSize:12, padding:"0 8px", flexShrink:0 }}>
+                      style={{ height:32, borderRadius:6, border:"1px solid var(--line-2)", background:"var(--panel-2)", color:"var(--ink)", fontSize:12, padding:"0 32px 0 10px", flexShrink:0, appearance:"none", backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat:"no-repeat", backgroundPosition:"right 10px center" }}>
                       {roles.map(r => <option key={r}>{r}</option>)}
                     </select>
                   </div>
