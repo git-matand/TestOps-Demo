@@ -98,7 +98,7 @@ function TeamCard({ team, onEdit }: { team: Team; onEdit: () => void }) {
         <div style={{ display:"flex", alignItems:"flex-start", gap:10, marginBottom:6 }}>
           <div style={{ flex:1, minWidth:0 }}>
             <div style={{ fontSize:15.5, fontWeight:650, color:"var(--ink)", lineHeight:1.25 }}>{team.name}</div>
-            <div style={{ fontSize:13, color:"var(--ink-3)", marginTop:4, lineHeight:1.5, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>{team.description}</div>
+            <div style={{ fontSize:13, color:"var(--ink-3)", marginTop:4, lineHeight:1.5, minHeight:"3em", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>{team.description}</div>
             {team.benchIds && team.benchIds.length > 0 && (
               <div style={{ display:"flex", gap:5, flexWrap:"wrap", marginTop:8 }}>
                 {team.benchIds.map(bid => {
