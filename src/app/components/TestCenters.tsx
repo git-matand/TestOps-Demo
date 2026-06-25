@@ -80,6 +80,10 @@ function avail(center: TestCenter, benches: TestBench[]) {
   return Math.round((cb.filter(b => b.status === "Up").length / cb.length) * 100);
 }
 
+function totalBeds(center: TestCenter, benches: TestBench[]) {
+  return benches.filter(b => center.benchIds.includes(b.id)).reduce((s, b) => s + b.hosts.length, 0);
+}
+
 function statusLabel(pct: number) {
   if (pct >= 80) return { label: "Operational", color: "var(--ok)",   dot: "ok"   };
   if (pct >= 50) return { label: "Degraded",    color: "var(--warn)", dot: "warn" };
@@ -126,6 +130,7 @@ function CenterCard({
   const down    = cb.filter(b => b.status === "Down").length;
   const deg     = cb.filter(b => b.status === "Degraded").length;
   const maint   = cb.filter(b => b.status === "Maintenance").length;
+  const beds    = totalBeds(center, benches);
 
   return (
     <div className="to-s4">
@@ -175,11 +180,12 @@ function CenterCard({
           </div>
 
           {/* Metrics row */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginBottom: 14 }}>
             {[
-              { label: "Availability", value: pct + "%", color: st.color },
-              { label: "Utilization",  value: meta.utilization + "%", color: meta.utilization >= 70 ? "var(--warn)" : "var(--ink)" },
-              { label: "Campaigns",    value: String(meta.campaigns), color: "var(--ink)" },
+              { label: "Availability", value: pct + "%",               color: st.color },
+              { label: "Utilization",  value: meta.utilization + "%",  color: meta.utilization >= 70 ? "var(--warn)" : "var(--ink)" },
+              { label: "Campaigns",    value: String(meta.campaigns),  color: "var(--ink)" },
+              { label: "Test Beds",    value: String(beds),            color: "var(--ink)" },
             ].map(m => (
               <div key={m.label} style={{
                 background: "var(--bg)", borderRadius: 7, padding: "8px 10px", textAlign: "center",
@@ -271,17 +277,23 @@ function LocBadge({ color, text }: { color: string; text: string }) {
   );
 }
 
-function NewCenterModal({ onClose, onCreate }: {
+// ─── Shared 5-step wizard (used for both create and edit) ─────────────────────
+function CenterWizard({
+  mode, initial, centerId, onClose, onComplete,
+}: {
+  mode: "create" | "edit";
+  initial?: { name?: string; city?: string; country?: string; address?: string; benchIds?: string[]; assetTags?: string[] };
+  centerId?: string;
   onClose: () => void;
-  onCreate: (d: NewCenterDraft) => void;
+  onComplete: (d: NewCenterDraft) => void;
 }) {
   const [step, setStep]             = useState(1);
-  const [name, setName]             = useState("");
-  const [city, setCity]             = useState("");
-  const [country, setCountry]       = useState("Germany");
-  const [address, setAddress]       = useState("");
-  const [selBenches, setSelB]       = useState<string[]>([]);
-  const [selAssets,  setSelA]       = useState<string[]>([]);
+  const [name, setName]             = useState(initial?.name    ?? "");
+  const [city, setCity]             = useState(initial?.city    ?? "");
+  const [country, setCountry]       = useState(initial?.country ?? "Germany");
+  const [address, setAddress]       = useState(initial?.address ?? "");
+  const [selBenches, setSelB]       = useState<string[]>(initial?.benchIds  ?? []);
+  const [selAssets,  setSelA]       = useState<string[]>(initial?.assetTags ?? []);
   const [selPeople,  setSelP]       = useState<string[]>([]);
   const [selTeams,   setSelT]       = useState<string[]>([]);
   const [searchB,    setSearchB]    = useState("");
@@ -365,7 +377,7 @@ function NewCenterModal({ onClose, onCreate }: {
 
   function handleCreate() {
     if (!valid1) return;
-    onCreate({ name, city, country, address, benchIds: selBenches, assetTags: selAssets, personIds: selPeople });
+    onComplete({ name, city, country, address, benchIds: selBenches, assetTags: selAssets, personIds: selPeople });
   }
 
   return (
@@ -380,8 +392,8 @@ function NewCenterModal({ onClose, onCreate }: {
         <div style={{ padding:"18px 22px 14px", borderBottom:"1px solid var(--line)" }}>
           <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:14 }}>
             <div>
-              <h3 style={{ margin:0, fontSize:16, fontWeight:660, color:"var(--ink)" }}>New Test Center</h3>
-              <div style={{ fontSize:12, color:"var(--ink-3)", marginTop:2 }}>Step {step} of 5 — {WIZARD_STEPS[step - 1]}</div>
+              <h3 style={{ margin:0, fontSize:16, fontWeight:660, color:"var(--ink)" }}>{mode === "edit" ? "Edit Test Center" : "New Test Center"}</h3>
+              <div style={{ fontSize:12, color:"var(--ink-3)", marginTop:2 }}>{mode === "edit" && centerId ? `${centerId} · ` : ""}Step {step} of 5 — {WIZARD_STEPS[step - 1]}</div>
             </div>
             <button onClick={onClose} style={{ width:28, height:28, borderRadius:6, border:"1px solid var(--line-2)", background:"var(--panel-2)", display:"grid", placeItems:"center", color:"var(--ink-3)", cursor:"pointer", flexShrink:0 }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -614,7 +626,7 @@ function NewCenterModal({ onClose, onCreate }: {
           {/* ── Step 5: Summary ── */}
           {step === 5 && (
             <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-              <div style={{ fontSize:13, color:"var(--ink-2)" }}>Review your selections before creating the center.</div>
+              <div style={{ fontSize:13, color:"var(--ink-2)" }}>{mode === "edit" ? "Review your changes before saving." : "Review your selections before creating the center."}</div>
 
               <div style={{ background:"var(--panel-2)", borderRadius:10, padding:"12px 14px", border:"1px solid var(--line-2)" }}>
                 <div style={{ fontSize:10.5, fontWeight:600, color:"var(--ink-4)", textTransform:"uppercase", letterSpacing:".06em", marginBottom:8 }}>Location</div>
@@ -708,8 +720,17 @@ function NewCenterModal({ onClose, onCreate }: {
               </button>
             ) : (
               <button className="to-btn primary sm" disabled={!valid1} onClick={handleCreate}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
-                Create center
+                {mode === "edit" ? (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>
+                    Save changes
+                  </>
+                ) : (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
+                    Create center
+                  </>
+                )}
               </button>
             )}
           </div>
@@ -719,15 +740,40 @@ function NewCenterModal({ onClose, onCreate }: {
   );
 }
 
+// ─── Thin wrappers ────────────────────────────────────────────────────────────
+type CenterEdits = NewCenterDraft;
+
+function NewCenterModal({ onClose, onCreate }: { onClose: () => void; onCreate: (d: NewCenterDraft) => void }) {
+  return <CenterWizard mode="create" onClose={onClose} onComplete={onCreate} />;
+}
+
+function EditCenterModal({ center, onClose, onSave }: { center: TestCenter; onClose: () => void; onSave: (e: CenterEdits) => void }) {
+  return (
+    <CenterWizard
+      mode="edit"
+      centerId={center.id}
+      initial={{ name: center.name, city: center.city, country: center.country, address: center.address, benchIds: center.benchIds, assetTags: center.assetTags }}
+      onClose={onClose}
+      onComplete={onSave}
+    />
+  );
+}
+
 // ─── Detail View ──────────────────────────────────────────────────────────────
-function DetailView({ center, benches, onBack }: {
+function DetailView({ center, benches, onBack, onSave, onDelete }: {
   center: TestCenter;
   benches: TestBench[];
   onBack: () => void;
+  onSave: (e: CenterEdits) => void;
+  onDelete: () => void;
 }) {
-  const [tab, setTab] = useState<DetailTab>("overview");
+  const [tab, setTab]           = useState<DetailTab>("overview");
+  const [editOpen, setEditOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [delConfirm, setDelConfirm] = useState(false);
   const pct    = avail(center, benches);
   const st     = statusLabel(pct);
+  const beds   = totalBeds(center, benches);
   const meta   = META[center.id] ?? { utilization: 60, campaigns: 1, manager: "—", since: "—" };
   const cb     = benches.filter(b => center.benchIds.includes(b.id));
   const assets = ASSETS_INITIAL.filter(a => center.assetTags.includes(a.tag));
@@ -798,13 +844,38 @@ function DetailView({ center, benches, onBack }: {
             </div>
           </div>
           <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-            <button className="to-btn ghost sm">
+            <button className="to-btn ghost sm" onClick={() => setEditOpen(true)}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 20h4L18 10l-4-4L4 16z"/><path d="M14 6l4 4"/></svg>
               Edit
             </button>
-            <button className="to-btn ghost sm">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
-            </button>
+            {/* ⋮ menu */}
+            <div style={{ position:"relative" }}>
+              {menuOpen && <div style={{ position:"fixed", inset:0, zIndex:9 }} onClick={() => setMenuOpen(false)} />}
+              <button className="to-btn ghost sm" onClick={() => setMenuOpen(o => !o)}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+              </button>
+              {menuOpen && (
+                <div style={{
+                  position:"absolute", top:"calc(100% + 4px)", right:0, zIndex:10,
+                  background:"var(--panel)", border:"1px solid var(--line-2)", borderRadius:8,
+                  boxShadow:"0 8px 24px rgba(0,0,0,.12)", padding:4, minWidth:160,
+                }}>
+                  <button
+                    onClick={() => { setMenuOpen(false); setDelConfirm(true); }}
+                    style={{
+                      display:"flex", alignItems:"center", gap:8, width:"100%",
+                      padding:"8px 11px", borderRadius:6, border:"none", background:"transparent",
+                      fontSize:13, color:"var(--bad)", cursor:"pointer", textAlign:"left",
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "var(--bad-dim)")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                    Delete center
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -814,16 +885,16 @@ function DetailView({ center, benches, onBack }: {
           borderTop: "1px solid var(--line)", paddingTop: 14,
         }}>
           {[
-            { icon: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", label: "Manager", value: meta.manager },
-            { icon: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01", label: "Benches", value: `${cb.length} total` },
+            { icon: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", label: "Manager",    value: meta.manager },
+            { icon: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",                             label: "Benches",    value: `${cb.length} total` },
+            { icon: "M3 3h18v4H3zM3 10h18v4H3zM3 17h18v4H3z",                                         label: "Test Beds",  value: `${beds} beds` },
             { icon: "M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16", label: "Assets", value: `${assets.length} registered` },
-            { icon: "M12 8v4l3 3M3.05 11a9 9 0 1 0 .5-2.69", label: "Online since", value: meta.since },
-            { icon: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z M12 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z", label: "Coordinates", value: `${center.lat}°N ${center.lng}°E` },
-          ].map((item, i) => (
+            { icon: "M12 8v4l3 3M3.05 11a9 9 0 1 0 .5-2.69",                                          label: "Online since", value: meta.since },
+          ].map((item, i, arr) => (
             <div key={i} style={{
               display: "flex", alignItems: "center", gap: 8,
               padding: "4px 20px 4px 0", marginRight: 20,
-              borderRight: i < 4 ? "1px solid var(--line)" : "none",
+              borderRight: i < arr.length - 1 ? "1px solid var(--line)" : "none",
             }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" strokeWidth="1.7">
                 <path d={item.icon}/>
@@ -836,6 +907,40 @@ function DetailView({ center, benches, onBack }: {
           ))}
         </div>
       </div>
+
+      {/* Edit modal */}
+      {editOpen && (
+        <EditCenterModal
+          center={center}
+          onClose={() => setEditOpen(false)}
+          onSave={edits => { onSave(edits); setEditOpen(false); }}
+        />
+      )}
+
+      {/* Delete confirm */}
+      {delConfirm && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", display:"grid", placeItems:"center", zIndex:1100 }}
+          onClick={e => e.target === e.currentTarget && setDelConfirm(false)}>
+          <div style={{
+            background:"var(--panel)", borderRadius:12, width:400, maxWidth:"94vw",
+            padding:"24px", boxShadow:"0 24px 64px rgba(0,0,0,.28)", border:"1px solid var(--line-2)",
+          }}>
+            <div style={{ width:40, height:40, borderRadius:10, background:"var(--bad-dim)", display:"grid", placeItems:"center", marginBottom:14 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--bad)" strokeWidth="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/></svg>
+            </div>
+            <div style={{ fontSize:15, fontWeight:660, color:"var(--ink)", marginBottom:8 }}>Delete "{center.name}"?</div>
+            <div style={{ fontSize:13, color:"var(--ink-3)", lineHeight:1.5, marginBottom:20 }}>
+              This will remove the center from the list. Bench and asset assignments are not affected.
+            </div>
+            <div style={{ display:"flex", justifyContent:"flex-end", gap:8 }}>
+              <button className="to-btn ghost sm" onClick={() => setDelConfirm(false)}>Cancel</button>
+              <button className="to-btn danger sm" onClick={() => { setDelConfirm(false); onDelete(); }}>
+                Delete center
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="to-tabs" style={{ marginBottom: 16 }}>
@@ -1194,27 +1299,35 @@ function ViewToggle({ view, onChange }: { view: "grid" | "map"; onChange: (v: "g
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 export function TestCenters({ centers, benches, onOpenCenter }: Props) {
-  const [selected, setSelected]  = useState<string | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [newCenters, setNewCenters] = useState<TestCenter[]>([]);
-  const [view, setView]            = useState<"grid" | "map">("grid");
+  const [selected, setSelected]     = useState<string | null>(null);
+  const [modalOpen, setModalOpen]   = useState(false);
+  const [localCenters, setLocalCenters] = useState<TestCenter[]>([...centers]);
+  const [view, setView]             = useState<"grid" | "map">("grid");
 
-  const allCenters = [...centers, ...newCenters];
+  function handleSave(id: string, edits: CenterEdits) {
+    setLocalCenters(prev => prev.map(c => c.id === id ? { ...c, ...edits } : c));
+  }
+  function handleDelete(id: string) {
+    setLocalCenters(prev => prev.filter(c => c.id !== id));
+    setSelected(null);
+  }
 
   if (selected) {
-    const center = allCenters.find(c => c.id === selected);
+    const center = localCenters.find(c => c.id === selected);
     if (center) {
       return (
         <DetailView
           center={center}
           benches={benches}
           onBack={() => setSelected(null)}
+          onSave={edits => handleSave(center.id, edits)}
+          onDelete={() => handleDelete(center.id)}
         />
       );
     }
   }
 
-  const totalBenches = new Set(allCenters.flatMap(c => c.benchIds)).size;
+  const totalBenches = new Set(localCenters.flatMap(c => c.benchIds)).size;
 
   return (
     <div className="to-screen">
@@ -1224,7 +1337,7 @@ export function TestCenters({ centers, benches, onOpenCenter }: Props) {
           <div className="to-kicker">Infrastructure</div>
           <h1>Test Centers</h1>
           <div style={{ color: "var(--ink-2)", fontSize: 13, marginTop: 5 }}>
-            {allCenters.length} locations · {totalBenches} benches assigned
+            {localCenters.length} locations · {totalBenches} benches assigned
           </div>
         </div>
         <div className="to-head-actions">
@@ -1239,7 +1352,7 @@ export function TestCenters({ centers, benches, onOpenCenter }: Props) {
       {/* Map view */}
       {view === "map" && (
         <MapView
-          centers={allCenters}
+          centers={localCenters}
           benches={benches}
           onSelect={id => setSelected(id)}
         />
@@ -1247,16 +1360,16 @@ export function TestCenters({ centers, benches, onOpenCenter }: Props) {
 
       {/* Cards grid */}
       {view === "grid" && (
-      <div className="to-grid to-g12">
-        {allCenters.map(c => (
-          <CenterCard
-            key={c.id}
-            center={c}
-            benches={benches}
-            onClick={() => setSelected(c.id)}
-          />
-        ))}
-      </div>
+        <div className="to-grid to-g12">
+          {localCenters.map(c => (
+            <CenterCard
+              key={c.id}
+              center={c}
+              benches={benches}
+              onClick={() => setSelected(c.id)}
+            />
+          ))}
+        </div>
       )}
 
       {/* New Center Modal */}
@@ -1265,7 +1378,7 @@ export function TestCenters({ centers, benches, onOpenCenter }: Props) {
           onClose={() => setModalOpen(false)}
           onCreate={draft => {
             const newId = `TC-${draft.city.slice(0,3).toUpperCase()}`;
-            setNewCenters(prev => [...prev, {
+            setLocalCenters(prev => [...prev, {
               id: newId, name: draft.name, address: draft.address,
               city: draft.city, country: draft.country,
               lat: 0, lng: 0, benchIds: draft.benchIds, assetTags: draft.assetTags,

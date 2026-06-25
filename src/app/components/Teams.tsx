@@ -81,99 +81,189 @@ function Av({ initials, size = 28 }: { initials: string; size?: number }) {
   );
 }
 
-// ─── Team card ────────────────────────────────────────────────────────────────
-function TeamCard({ team, onEdit }: { team: Team; onEdit: () => void }) {
+// ─── Team table row ───────────────────────────────────────────────────────────
+function TeamRow({
+  team, expanded, onToggle, onEdit,
+}: { team: Team; expanded: boolean; onToggle: () => void; onEdit: () => void }) {
   const c = CTR[team.centerId] ?? CTR[""];
   const members = team.members
     .map(m => ({ ...m, eng: ENGINEERS.find(e => e.id === m.engineerId) }))
     .filter((m): m is typeof m & { eng: Engineer } => !!m.eng);
 
+  const SHOW = 4;
+  const extra = Math.max(0, members.length - SHOW);
+
   return (
-    <div style={{
-      background:"var(--panel)", borderRadius:12, border:"1px solid var(--line-2)",
-      display:"flex", flexDirection:"column", height:"100%",
-    }}>
-      {/* Header */}
-      <div style={{ padding:"16px 18px 12px", borderBottom:"1px solid var(--line)" }}>
-        <div style={{ display:"flex", alignItems:"flex-start", gap:10, marginBottom:6 }}>
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontSize:15.5, fontWeight:650, color:"var(--ink)", lineHeight:1.25 }}>{team.name}</div>
-            <div style={{ fontSize:13, color:"var(--ink-3)", marginTop:4, lineHeight:1.5, minHeight:"3em", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>{team.description}</div>
-            {team.benchIds && team.benchIds.length > 0 && (
-              <div style={{ display:"flex", gap:5, flexWrap:"wrap", marginTop:8 }}>
-                {team.benchIds.map(bid => {
-                  const bench = BENCHES_INITIAL.find(b => b.id === bid);
-                  if (!bench) return null;
-                  const stColor = bench.status === "Up" ? "var(--ok)" : bench.status === "Down" ? "var(--bad)" : bench.status === "Degraded" ? "var(--warn)" : "var(--ink-4)";
-                  return (
-                    <span key={bid} title={bench.name} style={{
-                      display:"inline-flex", alignItems:"center", gap:4,
-                      fontSize:11, padding:"2px 7px", borderRadius:5,
-                      background:"var(--panel-2)", color:"var(--ink-3)",
-                      fontFamily:"var(--mono)", border:"1px solid var(--line)",
-                    }}>
-                      <span style={{ width:5, height:5, borderRadius:"50%", background:stColor, flexShrink:0 }} />
-                      {bench.hosts[0]?.hostId}
-                    </span>
-                  );
-                })}
-              </div>
+    <>
+      <tr
+        onClick={onToggle}
+        style={{ cursor:"pointer", borderBottom: expanded ? "none" : "1px solid var(--line)", transition:"background .1s" }}
+        onMouseEnter={e => { if (!expanded) (e.currentTarget as HTMLTableRowElement).style.background = "var(--panel-2)"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = ""; }}
+      >
+        {/* Chevron */}
+        <td style={{ width:32, paddingLeft:14, paddingRight:4, verticalAlign:"middle" }}>
+          <svg
+            width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="var(--ink-3)" strokeWidth="2.2"
+            style={{ display:"block", transform: expanded ? "rotate(90deg)" : "none", transition:"transform .15s" }}
+          >
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+        </td>
+
+        {/* Team name + description */}
+        <td style={{ padding:"14px 12px 14px 0", verticalAlign:"middle", minWidth:220 }}>
+          <div style={{ fontSize:14, fontWeight:650, color:"var(--ink)", lineHeight:1.2 }}>{team.name}</div>
+          <div style={{
+            fontSize:12.5, color:"var(--ink-3)", marginTop:3, lineHeight:1.4,
+            overflow:"hidden", whiteSpace:"nowrap", textOverflow:"ellipsis", maxWidth:360,
+          }}>{team.description}</div>
+        </td>
+
+        {/* Center */}
+        <td style={{ padding:"14px 12px", verticalAlign:"middle", whiteSpace:"nowrap" }}>
+          <span style={{
+            display:"inline-flex", alignItems:"center", gap:5,
+            padding:"3px 10px", borderRadius:12,
+            fontSize:12, fontWeight:600, background:c.bg, color:c.color,
+          }}>
+            <span style={{ width:5, height:5, borderRadius:"50%", background:c.color, flexShrink:0 }} />
+            {c.name}
+          </span>
+        </td>
+
+        {/* Members avatar stack */}
+        <td style={{ padding:"14px 12px", verticalAlign:"middle" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+            <div style={{ display:"flex" }}>
+              {members.slice(0, SHOW).map((m, i) => (
+                <span key={m.engineerId} title={m.eng.name} style={{ marginLeft: i === 0 ? 0 : -7 }}>
+                  <Av initials={m.eng.initials} size={26} />
+                </span>
+              ))}
+              {extra > 0 && (
+                <span style={{
+                  display:"inline-flex", alignItems:"center", justifyContent:"center",
+                  width:26, height:26, borderRadius:"50%", marginLeft:-7,
+                  background:"var(--panel-3)", border:"2px solid var(--panel)",
+                  fontSize:10, fontWeight:700, color:"var(--ink-3)",
+                }}>+{extra}</span>
+              )}
+            </div>
+            <span style={{ fontSize:12.5, color:"var(--ink-3)", fontWeight:500 }}>
+              {members.length} member{members.length !== 1 ? "s" : ""}
+            </span>
+          </div>
+        </td>
+
+        {/* Bench badges */}
+        <td style={{ padding:"14px 12px", verticalAlign:"middle" }}>
+          <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+            {(team.benchIds ?? []).slice(0, 4).map(bid => {
+              const bench = BENCHES_INITIAL.find(b => b.id === bid);
+              if (!bench) return null;
+              const stColor = bench.status === "Up" ? "var(--ok)" : bench.status === "Down" ? "var(--bad)" : bench.status === "Degraded" ? "var(--warn)" : "var(--ink-4)";
+              return (
+                <span key={bid} title={bench.name} style={{
+                  display:"inline-flex", alignItems:"center", gap:4,
+                  fontSize:11, padding:"2px 7px", borderRadius:5,
+                  background:"var(--panel-2)", color:"var(--ink-3)",
+                  fontFamily:"var(--mono)", border:"1px solid var(--line)",
+                }}>
+                  <span style={{ width:5, height:5, borderRadius:"50%", background:stColor, flexShrink:0 }} />
+                  {bench.hosts[0]?.hostId}
+                </span>
+              );
+            })}
+            {(team.benchIds ?? []).length > 4 && (
+              <span style={{ fontSize:11, color:"var(--ink-4)", padding:"2px 6px" }}>
+                +{(team.benchIds ?? []).length - 4}
+              </span>
+            )}
+            {!(team.benchIds ?? []).length && (
+              <span style={{ fontSize:12, color:"var(--ink-4)" }}>—</span>
             )}
           </div>
-          <span style={{
-            flexShrink:0, padding:"3px 10px", borderRadius:12,
-            fontSize:12, fontWeight:600, background:c.bg, color:c.color,
-            whiteSpace:"nowrap",
-          }}>
-            {c.name !== "Unassigned" ? (
-              <><span style={{ width:5, height:5, borderRadius:"50%", background:c.color, display:"inline-block", marginRight:5, verticalAlign:"middle" }} />{c.name}</>
-            ) : c.name}
-          </span>
-        </div>
-      </div>
+        </td>
 
-      {/* Member list */}
-      <div style={{ padding:"12px 18px", flex:1 }}>
-        {members.map((m, i) => {
-          const av = AVAIL[m.eng.availability];
-          return (
-            <div key={m.engineerId} style={{
-              display:"flex", alignItems:"center", gap:9,
-              paddingBottom: i < members.length - 1 ? 10 : 0,
-              marginBottom: i < members.length - 1 ? 10 : 0,
-              borderBottom: i < members.length - 1 ? "1px solid var(--line)" : "none",
+        {/* Since */}
+        <td style={{ padding:"14px 12px", verticalAlign:"middle", whiteSpace:"nowrap" }}>
+          <span style={{ fontSize:12.5, color:"var(--ink-3)" }}>{team.createdAt}</span>
+        </td>
+
+        {/* Actions */}
+        <td style={{ padding:"14px 14px 14px 12px", verticalAlign:"middle", textAlign:"right" }}>
+          <button
+            className="to-btn ghost sm"
+            onClick={e => { e.stopPropagation(); onEdit(); }}
+          >
+            Edit team
+          </button>
+        </td>
+      </tr>
+
+      {/* Expanded member details */}
+      {expanded && (
+        <tr style={{ borderBottom:"1px solid var(--line)" }}>
+          <td />
+          <td colSpan={6} style={{ padding:"0 12px 16px 0" }}>
+            <div style={{
+              background:"var(--bg)", borderRadius:10, border:"1px solid var(--line)",
+              overflow:"hidden",
             }}>
-              <Av initials={m.eng.initials} size={28} />
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontSize:13, fontWeight:600, color:"var(--ink)" }}>{m.eng.name}</div>
-                <div style={{ fontSize:12, fontWeight:500, color:"var(--ink-3)", marginTop:1 }}>{m.eng.specialization}</div>
-              </div>
-              <span style={{
-                fontSize:12, padding:"2px 8px", borderRadius:4,
-                background:"var(--panel-2)", color:"var(--ink-3)", fontWeight:500,
-              }}>
-                {m.teamRole}
-              </span>
-              <span title={m.eng.availability} style={{
-                width:7, height:7, borderRadius:"50%",
-                background:av.dot, flexShrink:0,
-              }} />
+              <table style={{ width:"100%", borderCollapse:"collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom:"1px solid var(--line)" }}>
+                    {["Member", "Role", "Specialization", "Availability"].map(h => (
+                      <th key={h} style={{
+                        padding:"7px 14px", textAlign:"left",
+                        fontSize:10.5, fontWeight:600, color:"var(--ink-4)",
+                        textTransform:"uppercase", letterSpacing:".05em",
+                      }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {members.map((m, i) => {
+                    const av = AVAIL[m.eng.availability];
+                    return (
+                      <tr key={m.engineerId} style={{ borderTop: i > 0 ? "1px solid var(--line)" : "none" }}>
+                        <td style={{ padding:"10px 14px" }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:9 }}>
+                            <Av initials={m.eng.initials} size={28} />
+                            <span style={{ fontSize:13, fontWeight:600, color:"var(--ink)" }}>{m.eng.name}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding:"10px 14px" }}>
+                          <span style={{
+                            fontSize:12, padding:"2px 8px", borderRadius:4,
+                            background:"var(--panel)", border:"1px solid var(--line-2)",
+                            color:"var(--ink-3)", fontWeight:500,
+                          }}>{m.teamRole}</span>
+                        </td>
+                        <td style={{ padding:"10px 14px", fontSize:13, color:"var(--ink-2)" }}>
+                          {m.eng.specialization}
+                        </td>
+                        <td style={{ padding:"10px 14px" }}>
+                          <span style={{
+                            display:"inline-flex", alignItems:"center", gap:6,
+                            fontSize:12, fontWeight:500, color:av.color,
+                          }}>
+                            <span style={{ width:6, height:6, borderRadius:"50%", background:av.dot }} />
+                            {m.eng.availability}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          );
-        })}
-      </div>
-
-      {/* Footer */}
-      <div style={{
-        padding:"10px 18px", borderTop:"1px solid var(--line)",
-        display:"flex", alignItems:"center", justifyContent:"space-between",
-      }}>
-        <span style={{ fontSize:12.5, fontWeight:500, color:"var(--ink-3)" }}>
-          {members.length} member{members.length !== 1 ? "s" : ""} · Since {team.createdAt}
-        </span>
-        <button className="to-btn ghost sm" onClick={onEdit}>Edit team</button>
-      </div>
-    </div>
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
@@ -615,6 +705,8 @@ export function Teams({ addToast }: Props) {
   const [editId, setEditId] = useState<string | null>(null);
   const [ctrFilters, setCtrFilters] = useState<string[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const toggleExpand = (id: string) => setExpandedId(p => p === id ? null : id);
   const toggleCtr = (id: string) => setCtrFilters(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
 
   const editingTeam = editId ? teams.find(t => t.id === editId) : null;
@@ -766,25 +858,46 @@ export function Teams({ addToast }: Props) {
         </div>
       </div>
 
-      {/* ── Team cards grid ─────────────────────────────────────────────── */}
-      {visibleTeams.length > 0 ? (
-        <div className="to-grid to-g12" style={{ marginBottom:24, alignItems:"stretch" }}>
-          {visibleTeams.map(t => (
-            <div key={t.id} className="to-s6" style={{ display:"flex" }}>
-              <TeamCard team={t} onEdit={() => openEdit(t.id)} />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="to-chart-empty" style={{ height:200, marginBottom:24 }}>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" style={{ opacity:.35 }}>
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
-          <div>No teams for selected center</div>
-          <button className="to-btn ghost sm" onClick={openNew}>Create first team</button>
-        </div>
-      )}
+      {/* ── Teams table ─────────────────────────────────────────────────── */}
+      <div className="to-panel" style={{ marginBottom:24, overflow:"hidden" }}>
+        {visibleTeams.length > 0 ? (
+          <table style={{ width:"100%", borderCollapse:"collapse" }}>
+            <thead>
+              <tr style={{ borderBottom:"1px solid var(--line)" }}>
+                <th style={{ width:32 }} />
+                {["Team", "Center", "Members", "Benches", "Since", ""].map(h => (
+                  <th key={h} style={{
+                    padding:"9px 12px", textAlign:"left",
+                    fontSize:10.5, fontWeight:600, color:"var(--ink-4)",
+                    textTransform:"uppercase", letterSpacing:".06em",
+                    whiteSpace:"nowrap",
+                  }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {visibleTeams.map(t => (
+                <TeamRow
+                  key={t.id}
+                  team={t}
+                  expanded={expandedId === t.id}
+                  onToggle={() => toggleExpand(t.id)}
+                  onEdit={() => openEdit(t.id)}
+                />
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div className="to-chart-empty" style={{ height:200 }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" style={{ opacity:.35 }}>
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            <div>No teams for selected center</div>
+            <button className="to-btn ghost sm" onClick={openNew}>Create first team</button>
+          </div>
+        )}
+      </div>
 
       {/* ── Engineer roster ─────────────────────────────────────────────── */}
       <RosterCard addToast={addToast} />
