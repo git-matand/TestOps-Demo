@@ -107,7 +107,7 @@
 .to-iconbtn{width:32px;height:32px;border-radius:6px;border:1px solid transparent;background:transparent;display:grid;place-items:center;color:var(--ink-2);position:relative;transition:.1s}
 .to-iconbtn:hover{color:var(--ink);background:var(--panel-3)}
 .to-iconbtn .nd{position:absolute;top:6px;right:7px;width:6px;height:6px;border-radius:50%;background:var(--brand-cta);border:1.5px solid var(--bg-2)}
-.to-content{padding:22px;max-width:1500px;width:100%}
+.to-content{padding:22px 28px;width:100%}
 .to-screen{animation:to-fade .2s ease}
 .to-page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap}
 .to-kicker{font-family:var(--ui);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:550;margin-bottom:7px}
