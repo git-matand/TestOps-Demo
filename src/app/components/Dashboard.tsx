@@ -172,6 +172,112 @@ function computeIssues(sel: string[]): Issue[] {
   return out.sort((a, b) => a.sev === b.sev ? 0 : a.sev === "critical" ? -1 : 1);
 }
 
+// ─── Per-center metrics for comparison ───────────────────────────────────────
+function computeCenterMetrics(centerId: string) {
+  const center = TEST_CENTERS.find(c => c.id === centerId);
+  if (!center) return null;
+  const benches = BENCHES_INITIAL.filter(b => center.benchIds.includes(b.id));
+  const upCt    = benches.filter(b => b.status === "Up").length;
+  const maintCt = benches.filter(b => b.status === "Maintenance").length;
+  const downCt  = benches.filter(b => b.status === "Down").length;
+  const avail   = benches.length ? Math.round(upCt / benches.length * 100) : 0;
+  const live    = benches.filter(b => b.telemetry.collectorUp);
+  const util    = live.length ? Math.round(live.reduce((s, b) => s + b.telemetry.cpuPct, 0) / live.length) : 0;
+  const extra   = CTR_EXTRA[centerId] ?? { campaigns: 0, dutsOnline: 0, dutsTotal: 0 };
+  const status  = avail >= 80 ? "ok" : avail >= 50 ? "warn" : "bad";
+  const statusFill = avail >= 80 ? "#1A9648" : avail >= 50 ? "#B8860B" : "#C0392B";
+  return { center, avail, util, extra, benches, upCt, maintCt, downCt, status, statusFill };
+}
+
+const STATUS_LABEL: Record<string, string> = { ok: "Operational", warn: "Degraded", bad: "Issues" };
+
+// ─── Side-by-side comparison card ────────────────────────────────────────────
+function CenterCompareCard({ centerId, issues }: { centerId: string; issues: Issue[] }) {
+  const m = computeCenterMetrics(centerId);
+  if (!m) return null;
+  const { center, avail, util, extra, benches, upCt, maintCt, downCt, statusFill } = m;
+  const myIssues = issues.filter(i =>
+    i.centerName === center.city || i.centerName === center.name
+  );
+  const crit = myIssues.filter(i => i.sev === "critical").length;
+  const warn = myIssues.filter(i => i.sev === "warning").length;
+
+  const kpis = [
+    { label: "Availability", value: avail + "%", color: statusFill },
+    { label: "Utilization",  value: util + "%",  color: "var(--ink)" },
+    { label: "Campaigns",    value: String(extra.campaigns), color: "var(--ink)" },
+    { label: "DUTs Online",  value: `${extra.dutsOnline}/${extra.dutsTotal}`, color: "var(--ink)" },
+  ];
+
+  return (
+    <div style={{
+      background: "var(--panel-2)", borderRadius: 10,
+      border: "1px solid var(--line-2)", overflow: "hidden",
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: "12px 14px 10px",
+        borderBottom: "1px solid var(--line)",
+        borderTop: `3px solid ${statusFill}`,
+      }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+          <div>
+            <div style={{ fontSize: 13.5, fontWeight: 660, color: "var(--ink)", lineHeight: 1.2 }}>{center.name}</div>
+            <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 2 }}>{center.city}, {center.country}</div>
+          </div>
+          <span style={{
+            fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 5, flexShrink: 0,
+            background: `${statusFill}22`, color: statusFill,
+          }}>
+            {STATUS_LABEL[m.status]}
+          </span>
+        </div>
+      </div>
+
+      {/* KPIs grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", padding: "10px 14px", gap: 6 }}>
+        {kpis.map(k => (
+          <div key={k.label} style={{ textAlign: "center", padding: "6px 4px", background: "var(--bg)", borderRadius: 6 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: k.color, lineHeight: 1 }}>{k.value}</div>
+            <div style={{ fontSize: 8.5, color: "var(--ink-4)", marginTop: 3, letterSpacing: ".02em" }}>{k.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Bench status bar */}
+      <div style={{ padding: "0 14px 10px" }}>
+        <div style={{ display: "flex", height: 6, borderRadius: 4, overflow: "hidden", gap: 1.5, marginBottom: 5 }}>
+          {upCt   > 0 && <div style={{ flex: upCt,   background: "#1A9648", borderRadius: 3 }} />}
+          {maintCt > 0 && <div style={{ flex: maintCt, background: "#B8860B", borderRadius: 3 }} />}
+          {downCt > 0 && <div style={{ flex: downCt,  background: "#C0392B", borderRadius: 3 }} />}
+        </div>
+        <div style={{ display: "flex", gap: 10, fontSize: 10.5, color: "var(--ink-3)" }}>
+          <span><span style={{ color: "#1A9648", fontWeight: 600 }}>{upCt}</span> Up</span>
+          {maintCt > 0 && <span><span style={{ color: "#B8860B", fontWeight: 600 }}>{maintCt}</span> Maint.</span>}
+          {downCt > 0  && <span><span style={{ color: "#C0392B", fontWeight: 600 }}>{downCt}</span> Down</span>}
+          <span style={{ marginLeft: "auto", color: "var(--ink-4)" }}>{benches.length} benches</span>
+        </div>
+      </div>
+
+      {/* Issues */}
+      {(crit > 0 || warn > 0) && (
+        <div style={{
+          padding: "7px 14px", borderTop: "1px solid var(--line)",
+          display: "flex", gap: 6,
+        }}>
+          {crit > 0 && <span style={{ fontSize: 10.5, color: "#C0392B", fontWeight: 600 }}>⚠ {crit} critical</span>}
+          {warn > 0 && <span style={{ fontSize: 10.5, color: "#B8860B", fontWeight: 600 }}>⚡ {warn} warning{warn > 1 ? "s" : ""}</span>}
+        </div>
+      )}
+      {crit === 0 && warn === 0 && (
+        <div style={{ padding: "7px 14px", borderTop: "1px solid var(--line)", fontSize: 10.5, color: "#1A9648" }}>
+          ✓ No issues
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Center pill ──────────────────────────────────────────────────────────────
 function CenterPill({
   name, count, avail, active, onClick,
@@ -335,21 +441,36 @@ export function Dashboard({ onBedClick, onGoReports, addToast, role = "engineer"
       </div>
 
       {/* ── Center selector ───────────────────────────────────────────────── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 11, color: "var(--ink-4)", fontWeight: 500, textTransform: "uppercase", letterSpacing: ".07em", marginRight: 2 }}>
-          Center
-        </span>
-        <CenterPill name="All Centers" active={sel.includes("all")} onClick={() => toggle("all")} />
-        {TEST_CENTERS.map(c => (
-          <CenterPill
-            key={c.id}
-            name={c.city}
-            count={c.benchIds.length}
-            avail={ctrAvail[c.id]}
-            active={sel.includes(c.id)}
-            onClick={() => toggle(c.id)}
-          />
-        ))}
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 11, color: "var(--ink-4)", fontWeight: 500, textTransform: "uppercase", letterSpacing: ".07em", marginRight: 2 }}>
+            Center
+          </span>
+          <CenterPill name="All Centers" active={sel.includes("all")} onClick={() => toggle("all")} />
+          {TEST_CENTERS.map(c => (
+            <CenterPill
+              key={c.id}
+              name={c.city}
+              count={c.benchIds.length}
+              avail={ctrAvail[c.id]}
+              active={sel.includes(c.id)}
+              onClick={() => toggle(c.id)}
+            />
+          ))}
+          {sel.includes("all") && (
+            <span style={{ fontSize: 11, color: "var(--ink-4)", marginLeft: 4 }}>
+              — click multiple centers to compare
+            </span>
+          )}
+          {!sel.includes("all") && sel.length >= 2 && (
+            <span style={{
+              fontSize: 11, color: "var(--brand)", fontWeight: 500,
+              background: "var(--brand-dim)", padding: "2px 8px", borderRadius: 5, marginLeft: 4,
+            }}>
+              {sel.length} centers selected
+            </span>
+          )}
+        </div>
       </div>
 
       {/* ── Needs Attention ──────────────────────────────────────────────── */}
@@ -397,6 +518,32 @@ export function Dashboard({ onBedClick, onGoReports, addToast, role = "engineer"
           <span style={{ fontSize: 13, color: "var(--ok)", fontWeight: 500 }}>
             All systems operational — no issues in selected scope
           </span>
+        </div>
+      )}
+
+      {/* ── Side-by-side comparison (2+ centers selected) ───────────────── */}
+      {!sel.includes("all") && sel.length >= 2 && (
+        <div className="to-panel" style={{ marginBottom: 20 }}>
+          <div className="to-panel-h">
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2">
+                <rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/>
+              </svg>
+              <span className="to-eyebrow">Center comparison</span>
+            </div>
+            <span style={{ fontSize: 11, color: "var(--ink-4)" }}>Aggregated totals shown in KPIs below</span>
+          </div>
+          <div className="to-panel-b">
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: `repeat(${sel.length}, 1fr)`,
+              gap: 12,
+            }}>
+              {sel.map(id => (
+                <CenterCompareCard key={id} centerId={id} issues={issues} />
+              ))}
+            </div>
+          </div>
         </div>
       )}
 

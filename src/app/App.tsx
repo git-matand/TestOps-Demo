@@ -8,7 +8,7 @@ import { Edge } from "./components/Edge";
 import { Campaigns } from "./components/Campaigns";
 import { AIInsights, runNLQuery } from "./components/AIInsights";
 import { Reports } from "./components/Reports";
-import { Admin } from "./components/Admin";
+import { Members, Logs } from "./components/Admin";
 import { Roadmap } from "./components/Roadmap";
 import { DUTDrawer, AssetDrawer } from "./components/Drawers";
 import { TestBenches } from "./components/TestBenches";
@@ -19,7 +19,7 @@ import { AssetForm } from "./components/AssetForm";
 import { CreateBenchSheet } from "./components/CreateBenchSheet";
 import { Teams } from "./components/Teams";
 
-type Screen = "ops" | "assets" | "edge" | "campaigns" | "ai" | "reports" | "admin" | "roadmap" | "benches" | "centers" | "teams";
+type Screen = "ops" | "assets" | "edge" | "campaigns" | "ai" | "reports" | "members" | "logs" | "roadmap" | "benches" | "centers" | "teams";
 
 interface ToastItem { id: number; title: string; subtitle?: string; type?: string }
 interface DrawerState { open: boolean; type: "dut" | "asset" | null; id: string | null }
@@ -28,7 +28,7 @@ interface AIAnswer { q: string; summary: string; rows?: typeof DATA.duts }
 
 const TITLES: Record<Screen, string> = {
   ops:"Live Dashboard", assets:"Assets", edge:"Edge & Telemetry", campaigns:"Campaigns",
-  ai:"AI Insights", reports:"Reports", admin:"Users & Audit", roadmap:"Future modules",
+  ai:"AI Insights", reports:"Reports", members:"Members", logs:"Audit Logs", roadmap:"Future modules",
   benches:"Test Benches", centers:"Test Centers", teams:"Teams",
 };
 
@@ -40,8 +40,9 @@ const NAV: { screen: Screen; label: string; icon: string; group: string; soon?: 
   {group:"", screen:"campaigns", label:"Campaigns", icon:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>'},
   {group:"Intelligence", screen:"ai", label:"AI Insights", icon:'<path d="M9 3a3 3 0 0 0-3 3 3 3 0 0 0-1 5.8V18a3 3 0 0 0 4 2.8M9 3a2.5 2.5 0 0 1 3 2.4v13.2A2.5 2.5 0 0 1 9 21M15 3a3 3 0 0 1 3 3 3 3 0 0 1 1 5.8V18a3 3 0 0 1-4 2.8M15 3a2.5 2.5 0 0 0-3 2.4"/>'},
   {group:"", screen:"reports", label:"Reports", icon:'<path d="M5 3h9l5 5v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5M8 13h8M8 17h5"/>'},
-  {group:"Administer", screen:"teams", label:"Teams", icon:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'},
-  {group:"", screen:"admin", label:"Users & Audit", icon:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="18" cy="9" r="2.2"/><path d="M21.5 20c0-2.4-1.6-4.3-3.5-4.3"/>'},
+  {group:"Users", screen:"teams",   label:"Teams",      icon:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'},
+  {group:"",      screen:"members", label:"Members",    icon:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="18" cy="9" r="2.2"/><path d="M21.5 20c0-2.4-1.6-4.3-3.5-4.3"/>'},
+  {group:"",      screen:"logs",    label:"Logs",       icon:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/>'},
 ];
 
 export default function App() {
@@ -340,7 +341,8 @@ export default function App() {
             {screen === "ai" && <AIInsights answer={aiAnswer} onQuery={handleQuery} onOpenDUT={openDUTDrawer} />}
             {screen === "reports" && <Reports addToast={addToast} />}
             {screen === "teams" && <Teams addToast={addToast} />}
-            {screen === "admin" && <Admin />}
+            {screen === "members" && <Members />}
+            {screen === "logs"    && <Logs />}
             {screen === "roadmap" && <Roadmap />}
             {screen === "centers" && (
               <TestCenters

@@ -2,6 +2,78 @@ import { useState } from "react";
 import { TestCenter, TestBench, Asset, ASSETS_INITIAL, BENCHES_INITIAL, TEST_CENTERS as ALL_CENTERS } from "../data";
 import { MapView } from "./MapView";
 
+// ─── City → Coordinates lookup ────────────────────────────────────────────────
+const CITY_COORDS: Record<string, [number, number]> = {
+  // Germany
+  "munich":       [48.137, 11.576], "münchen":      [48.137, 11.576],
+  "stuttgart":    [48.775,  9.182], "berlin":       [52.520, 13.405],
+  "hamburg":      [53.551,  9.993], "frankfurt":    [50.110,  8.682],
+  "cologne":      [50.938,  6.960], "köln":         [50.938,  6.960],
+  "düsseldorf":   [51.225,  6.776], "dortmund":     [51.514,  7.465],
+  "essen":        [51.457,  7.012], "nuremberg":    [49.453, 11.077],
+  "nürnberg":     [49.453, 11.077], "dresden":      [51.050, 13.737],
+  "leipzig":      [51.340, 12.375], "hannover":     [52.375,  9.735],
+  "hanover":      [52.375,  9.735], "bremen":       [53.079,  8.801],
+  "bochum":       [51.481,  7.222], "wuppertal":    [51.259,  7.149],
+  "augsburg":     [48.370, 10.898], "karlsruhe":    [49.009,  8.404],
+  "mannheim":     [49.487,  8.466], "freiburg":     [47.996,  7.849],
+  "kiel":         [54.323, 10.133], "münster":      [51.960,  7.626],
+  // Poland
+  "warsaw":       [52.230, 21.012], "warszawa":     [52.230, 21.012],
+  "kraków":       [50.061, 19.938], "krakow":       [50.061, 19.938],
+  "wrocław":      [51.107, 17.038], "wroclaw":      [51.107, 17.038],
+  "poznań":       [52.407, 16.934], "poznan":       [52.407, 16.934],
+  "gdańsk":       [54.352, 18.647], "gdansk":       [54.352, 18.647],
+  "łódź":         [51.759, 19.456], "lodz":         [51.759, 19.456],
+  "katowice":     [50.258, 19.020], "lublin":       [51.249, 22.568],
+  // Austria
+  "vienna":       [48.210, 16.363], "wien":         [48.210, 16.363],
+  "graz":         [47.070, 15.440], "linz":         [48.306, 14.286],
+  "salzburg":     [47.800, 13.045], "innsbruck":    [47.268, 11.394],
+  // Czech Republic
+  "prague":       [50.075, 14.438], "praha":        [50.075, 14.438],
+  "brno":         [49.195, 16.608], "ostrava":      [49.820, 18.262],
+  "pilsen":       [49.738, 13.374], "plzeň":        [49.738, 13.374],
+  // Hungary
+  "budapest":     [47.498, 19.040], "debrecen":     [47.531, 21.624],
+  "miskolc":      [48.103, 20.779], "pécs":         [46.076, 18.228],
+  // Romania
+  "bucharest":    [44.426, 26.103], "bucurești":    [44.426, 26.103],
+  "cluj-napoca":  [46.771, 23.592], "cluj":         [46.771, 23.592],
+  "timișoara":    [45.755, 21.229], "iași":         [47.160, 27.590],
+  // USA
+  "detroit":      [42.332, -83.045], "chicago":     [41.878, -87.630],
+  "new york":     [40.714, -74.006], "los angeles":  [34.052,-118.244],
+  "houston":      [29.760, -95.370], "phoenix":     [33.448,-112.074],
+  "silicon valley":[37.387,-122.058],"san jose":    [37.338,-121.886],
+  "san francisco":[37.774,-122.419], "seattle":     [47.606,-122.332],
+  // China
+  "beijing":      [39.905, 116.391], "shanghai":    [31.224, 121.470],
+  "guangzhou":    [23.130, 113.264], "shenzhen":    [22.543, 114.058],
+  "chengdu":      [30.572, 104.066], "wuhan":       [30.593, 114.305],
+  // Japan
+  "tokyo":        [35.689, 139.692], "osaka":       [34.693, 135.503],
+  "nagoya":       [35.181, 136.907], "yokohama":    [35.444, 139.638],
+};
+
+// Country centroid fallback
+const COUNTRY_COORDS: Record<string, [number, number]> = {
+  "Germany":        [51.165, 10.452],
+  "Poland":         [51.919, 19.145],
+  "Austria":        [47.516, 14.550],
+  "Czech Republic": [49.818, 15.473],
+  "Hungary":        [47.163, 19.503],
+  "Romania":        [45.943, 24.967],
+  "USA":            [37.090, -95.713],
+  "China":          [35.862, 104.195],
+  "Japan":          [36.205, 138.253],
+};
+
+function resolveCoords(city: string, country: string): [number, number] {
+  const key = city.trim().toLowerCase();
+  return CITY_COORDS[key] ?? COUNTRY_COORDS[country] ?? [48.137, 11.576];
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Props {
   centers: TestCenter[];
@@ -1378,10 +1450,11 @@ export function TestCenters({ centers, benches, onOpenCenter }: Props) {
           onClose={() => setModalOpen(false)}
           onCreate={draft => {
             const newId = `TC-${draft.city.slice(0,3).toUpperCase()}`;
+            const [lat, lng] = resolveCoords(draft.city, draft.country);
             setLocalCenters(prev => [...prev, {
               id: newId, name: draft.name, address: draft.address,
               city: draft.city, country: draft.country,
-              lat: 0, lng: 0, benchIds: draft.benchIds, assetTags: draft.assetTags,
+              lat, lng, benchIds: draft.benchIds, assetTags: draft.assetTags,
             }]);
             setModalOpen(false);
           }}

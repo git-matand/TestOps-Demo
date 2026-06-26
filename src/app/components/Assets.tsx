@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Asset, DATA, STATUS_MAP, TEST_CENTERS } from "../data";
+import React, { useState, useMemo } from "react";
+import { Asset, DATA, STATUS_MAP, TEST_CENTERS, BENCHES_INITIAL, TestBench } from "../data";
 import { SyncModal } from "./SyncModal";
 import { ScanModal } from "./QRModal";
 interface Props {
@@ -14,7 +14,240 @@ interface Props {
   addToast: (t: string, s?: string, type?: string) => void;
 }
 
-const TABS = [["registry","Registry"],["models","Models"],["categories","Categories"],["audit","Audit & Calibration"],["licenses","Licenses"],["topology","Topology"]];
+// ─── Types ────────────────────────────────────────────────────────────────────
+type MoveItem = { type: "asset" | "bench"; id: string; label: string };
+type MoveEntry = {
+  id: string;
+  ts: string;
+  items: MoveItem[];
+  fromId: string; fromName: string;
+  toId: string;   toName: string;
+  by: string;
+};
+
+// ─── Transfer Sheet ───────────────────────────────────────────────────────────
+const CTR_COLORS: Record<string, { color: string; bg: string }> = {
+  "TC-MUC": { color: "var(--brand)", bg: "rgba(94,106,210,.09)" },
+  "TC-STR": { color: "var(--warn)",  bg: "rgba(184,134,11,.09)" },
+  "TC-WAW": { color: "var(--ok)",    bg: "rgba(26,150,72,.09)"  },
+};
+
+function centerOf(tag: string, cAssets: Record<string, string[]>): string | undefined {
+  return Object.keys(cAssets).find(id => cAssets[id].includes(tag));
+}
+function benchCenterOf(benchId: string, cBenches: Record<string, string[]>): string | undefined {
+  return Object.keys(cBenches).find(id => cBenches[id].includes(benchId));
+}
+
+interface TransferSheetProps {
+  preselectedAssets: string[];
+  assets: Asset[];
+  centerAssets: Record<string, string[]>;
+  centerBenches: Record<string, string[]>;
+  onClose: () => void;
+  onConfirm: (assetTags: string[], benchIds: string[], targetId: string) => void;
+}
+
+function TransferSheet({ preselectedAssets, assets, centerAssets, centerBenches, onClose, onConfirm }: TransferSheetProps) {
+  const [subTab,      setSubTab]      = useState<"assets"|"benches">(preselectedAssets.length > 0 ? "assets" : "assets");
+  const [assetSel,    setAssetSel]    = useState<Set<string>>(new Set(preselectedAssets));
+  const [benchSel,    setBenchSel]    = useState<Set<string>>(new Set());
+  const [targetId,    setTargetId]    = useState("");
+  const [searchA,     setSearchA]     = useState("");
+  const [searchB,     setSearchB]     = useState("");
+  const [srcFilter,   setSrcFilter]   = useState("all");
+
+  const toggleA = (tag: string) => setAssetSel(p => { const n = new Set(p); n.has(tag) ? n.delete(tag) : n.add(tag); return n; });
+  const toggleB = (id: string)  => setBenchSel(p => { const n = new Set(p); n.has(id)  ? n.delete(id)  : n.add(id);  return n; });
+
+  const filteredAssets = useMemo(() => {
+    const q = searchA.toLowerCase();
+    return assets.filter(a => {
+      if (srcFilter !== "all") {
+        const c = centerOf(a.tag, centerAssets);
+        if (c !== srcFilter) return false;
+      }
+      return !q || a.tag.toLowerCase().includes(q) || (a.model ?? "").toLowerCase().includes(q);
+    });
+  }, [assets, searchA, srcFilter, centerAssets]);
+
+  const filteredBenches = useMemo(() => {
+    const q = searchB.toLowerCase();
+    return BENCHES_INITIAL.filter(b => {
+      if (srcFilter !== "all") {
+        const c = benchCenterOf(b.id, centerBenches);
+        if (c !== srcFilter) return false;
+      }
+      return !q || b.id.toLowerCase().includes(q) || b.name.toLowerCase().includes(q);
+    });
+  }, [searchB, srcFilter, centerBenches]);
+
+  const totalSel = assetSel.size + benchSel.size;
+  const canConfirm = totalSel > 0 && targetId.length > 0;
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.48)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, padding:20 }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ background:"var(--panel)", borderRadius:14, width:580, maxWidth:"95vw", maxHeight:"88vh", display:"flex", flexDirection:"column", boxShadow:"0 24px 64px rgba(0,0,0,.3)", border:"1px solid var(--line-2)" }}>
+
+        {/* Header */}
+        <div style={{ padding:"18px 22px 14px", borderBottom:"1px solid var(--line)" }}>
+          <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:12 }}>
+            <div>
+              <div style={{ fontSize:16, fontWeight:660, color:"var(--ink)" }}>Transfer to Center</div>
+              <div style={{ fontSize:12, color:"var(--ink-3)", marginTop:2 }}>Move assets and benches between test centers</div>
+            </div>
+            <button onClick={onClose} style={{ width:28, height:28, borderRadius:6, border:"1px solid var(--line-2)", background:"var(--panel-2)", display:"grid", placeItems:"center", color:"var(--ink-3)", cursor:"pointer" }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+
+          {/* Sub-tabs */}
+          <div style={{ display:"flex", borderBottom:"1px solid var(--line)", marginBottom:-14 }}>
+            {(["assets","benches"] as const).map(t => (
+              <button key={t} onClick={() => setSubTab(t)} style={{
+                padding:"6px 14px", fontSize:12.5,
+                fontWeight: subTab === t ? 600 : 400,
+                color: subTab === t ? "var(--brand)" : "var(--ink-3)",
+                background:"none", border:"none",
+                borderBottom:`2px solid ${subTab === t ? "var(--brand)" : "transparent"}`,
+                cursor:"pointer", marginBottom:-1, textTransform:"capitalize",
+              }}>
+                {t === "assets" ? `Assets${assetSel.size > 0 ? ` · ${assetSel.size}` : ""}` : `Benches${benchSel.size > 0 ? ` · ${benchSel.size}` : ""}`}
+              </button>
+            ))}
+            <div style={{ flex:1 }} />
+            {/* Source filter */}
+            <select value={srcFilter} onChange={e => setSrcFilter(e.target.value)}
+              style={{ fontSize:11.5, border:"none", background:"transparent", color:"var(--ink-3)", cursor:"pointer", marginBottom:2 }}>
+              <option value="all">All centers</option>
+              {TEST_CENTERS.map(c => <option key={c.id} value={c.id}>{c.city}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div style={{ flex:1, overflowY:"auto", padding:"14px 22px" }}>
+
+          {/* Search */}
+          <div style={{ position:"relative", marginBottom:10 }}>
+            <svg style={{ position:"absolute", left:9, top:"50%", transform:"translateY(-50%)", color:"var(--ink-3)", pointerEvents:"none" }} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+            <input value={subTab === "assets" ? searchA : searchB}
+              onChange={e => subTab === "assets" ? setSearchA(e.target.value) : setSearchB(e.target.value)}
+              placeholder={subTab === "assets" ? "Search assets…" : "Search benches…"}
+              style={{ width:"100%", paddingLeft:30, height:32, borderRadius:6, border:"1px solid var(--line-2)", background:"var(--panel-2)", color:"var(--ink)", fontSize:12.5 }} />
+          </div>
+
+          {/* Assets list */}
+          {subTab === "assets" && (
+            <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+              {filteredAssets.length === 0 && <div style={{ textAlign:"center", color:"var(--ink-4)", fontSize:13, padding:"16px 0" }}>No assets match.</div>}
+              {filteredAssets.map(a => {
+                const cId = centerOf(a.tag, centerAssets);
+                const ctr = TEST_CENTERS.find(c => c.id === cId);
+                const cc = CTR_COLORS[cId ?? ""] ?? { color:"var(--ink-4)", bg:"var(--panel-2)" };
+                const checked = assetSel.has(a.tag);
+                return (
+                  <label key={a.tag} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 11px", borderRadius:8, cursor:"pointer",
+                    border:`1px solid ${checked ? "var(--brand)" : "var(--line-2)"}`,
+                    background: checked ? "var(--brand-dim)" : "var(--panel-2)", transition:"all .1s" }}>
+                    <input type="checkbox" checked={checked} onChange={() => toggleA(a.tag)}
+                      style={{ accentColor:"var(--brand)", width:14, height:14, flexShrink:0 }} />
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:12.5, fontWeight:550, color:"var(--ink)" }}>{a.tag} — {a.model ?? a.name}</div>
+                      <div style={{ fontSize:11, color:"var(--ink-4)" }}>{a.cat}</div>
+                    </div>
+                    {ctr && (
+                      <span style={{ fontSize:10.5, fontWeight:600, padding:"2px 7px", borderRadius:5, flexShrink:0, background:cc.bg, color:cc.color }}>
+                        {ctr.city}
+                      </span>
+                    )}
+                  </label>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Benches list */}
+          {subTab === "benches" && (
+            <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+              {filteredBenches.length === 0 && <div style={{ textAlign:"center", color:"var(--ink-4)", fontSize:13, padding:"16px 0" }}>No benches match.</div>}
+              {filteredBenches.map(b => {
+                const cId = benchCenterOf(b.id, centerBenches);
+                const ctr = TEST_CENTERS.find(c => c.id === cId);
+                const cc = CTR_COLORS[cId ?? ""] ?? { color:"var(--ink-4)", bg:"var(--panel-2)" };
+                const checked = benchSel.has(b.id);
+                const sc = b.status === "Down" ? "var(--bad)" : b.status === "Maintenance" ? "var(--warn)" : "var(--ok)";
+                return (
+                  <label key={b.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 11px", borderRadius:8, cursor:"pointer",
+                    border:`1px solid ${checked ? "var(--brand)" : "var(--line-2)"}`,
+                    background: checked ? "var(--brand-dim)" : "var(--panel-2)", transition:"all .1s" }}>
+                    <input type="checkbox" checked={checked} onChange={() => toggleB(b.id)}
+                      style={{ accentColor:"var(--brand)", width:14, height:14, flexShrink:0 }} />
+                    <span style={{ width:7, height:7, borderRadius:"50%", background:sc, flexShrink:0 }} />
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:12.5, fontWeight:550, color:"var(--ink)" }}>{b.id} — {b.name}</div>
+                      <div style={{ fontSize:11, color:"var(--ink-4)" }}>{b.location} · {b.hosts.length} host{b.hosts.length !== 1 ? "s" : ""}</div>
+                    </div>
+                    {ctr && (
+                      <span style={{ fontSize:10.5, fontWeight:600, padding:"2px 7px", borderRadius:5, flexShrink:0, background:cc.bg, color:cc.color }}>
+                        {ctr.city}
+                      </span>
+                    )}
+                    <span style={{ fontSize:10.5, color:sc, fontWeight:500, flexShrink:0 }}>{b.status}</span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Target center + footer */}
+        <div style={{ borderTop:"1px solid var(--line)", padding:"14px 22px" }}>
+          <div style={{ marginBottom:12 }}>
+            <div style={{ fontSize:11, fontWeight:600, color:"var(--ink-3)", textTransform:"uppercase", letterSpacing:".06em", marginBottom:8 }}>
+              Destination center
+            </div>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+              {TEST_CENTERS.map(c => {
+                const cc = CTR_COLORS[c.id] ?? { color:"var(--ink-4)", bg:"var(--panel-2)" };
+                const active = targetId === c.id;
+                return (
+                  <button key={c.id} onClick={() => setTargetId(active ? "" : c.id)} style={{
+                    display:"flex", alignItems:"center", gap:6, padding:"6px 13px", borderRadius:8, cursor:"pointer",
+                    border:`1.5px solid ${active ? cc.color : "var(--line-2)"}`,
+                    background: active ? cc.bg : "var(--panel-2)",
+                    color: active ? cc.color : "var(--ink-2)",
+                    fontWeight: active ? 600 : 400, fontSize:12.5, transition:"all .1s",
+                  }}>
+                    <span style={{ width:7, height:7, borderRadius:"50%", background: active ? cc.color : "var(--line-2)", flexShrink:0 }} />
+                    {c.name}
+                    <span style={{ fontSize:10.5, opacity:.7 }}>{c.city}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <span style={{ fontSize:12, color:"var(--ink-4)" }}>
+              {totalSel > 0 ? `${totalSel} item${totalSel > 1 ? "s" : ""} selected` : "Select items above"}
+            </span>
+            <div style={{ display:"flex", gap:8 }}>
+              <button className="to-btn ghost sm" onClick={onClose}>Cancel</button>
+              <button className="to-btn primary sm" disabled={!canConfirm} style={{ opacity: canConfirm ? 1 : 0.4 }}
+                onClick={() => canConfirm && onConfirm([...assetSel], [...benchSel], targetId)}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 3 21 3 21 9"/><path d="M21 3L10 14"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+                Transfer {totalSel > 0 ? `${totalSel} item${totalSel > 1 ? "s" : ""}` : ""}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const TABS = [["registry","Registry"],["models","Models"],["categories","Categories"],["audit","Audit & Calibration"],["licenses","Licenses"],["topology","Topology"],["transfers","Transfers"]];
 const STAT_CARDS = [["all","Total assets","509"],["deployed","Deployed","415"],["ready","Ready to Deploy","94"],["audit","Due for Audit","6"],["archived","Archived","12"]];
 
 const EYE = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.6"/></svg>;
@@ -148,10 +381,92 @@ export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister,
   const [search, setSearch] = useState("");
   const [syncOpen, setSyncOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
-  const [reassignTag, setReassignTag] = useState<string | null>(null);
   const [licenses, setLicenses] = useState<License[]>(INITIAL_LICENSES);
   const [licModalOpen, setLicModalOpen] = useState(false);
-  const [targetCenter, setTargetCenter] = useState("");
+
+  // Transfer state
+  const [transferOpen, setTransferOpen]   = useState(false);
+  const [transferPresel, setTransferPresel] = useState<string[]>([]);
+  const [centerAssets, setCenterAssets]   = useState<Record<string, string[]>>(() =>
+    Object.fromEntries(TEST_CENTERS.map(c => [c.id, [...c.assetTags]]))
+  );
+  const [centerBenches, setCenterBenches] = useState<Record<string, string[]>>(() =>
+    Object.fromEntries(TEST_CENTERS.map(c => [c.id, [...c.benchIds]]))
+  );
+  const [moveHistory, setMoveHistory] = useState<MoveEntry[]>([]);
+
+  function openTransfer(presel: string[] = []) {
+    setTransferPresel(presel);
+    setTransferOpen(true);
+  }
+
+  function handleTransferConfirm(assetTags: string[], benchIds: string[], targetId: string) {
+    const tCtr = TEST_CENTERS.find(c => c.id === targetId);
+    if (!tCtr) return;
+
+    // Build history items
+    const items: MoveItem[] = [
+      ...assetTags.map(tag => {
+        const a = assets.find(x => x.tag === tag);
+        return { type: "asset" as const, id: tag, label: a?.model ?? a?.name ?? tag };
+      }),
+      ...benchIds.map(id => {
+        const b = BENCHES_INITIAL.find(x => x.id === id);
+        return { type: "bench" as const, id, label: b?.name ?? id };
+      }),
+    ];
+
+    // Determine source (most common center among moved items)
+    const srcCounts: Record<string, number> = {};
+    assetTags.forEach(tag => {
+      const src = Object.keys(centerAssets).find(id => centerAssets[id].includes(tag));
+      if (src) srcCounts[src] = (srcCounts[src] ?? 0) + 1;
+    });
+    benchIds.forEach(id => {
+      const src = Object.keys(centerBenches).find(cid => centerBenches[cid].includes(id));
+      if (src) srcCounts[src] = (srcCounts[src] ?? 0) + 1;
+    });
+    const srcId = Object.entries(srcCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
+    const srcCtr = TEST_CENTERS.find(c => c.id === srcId);
+
+    // Update center-asset assignments
+    setCenterAssets(prev => {
+      const next = { ...prev };
+      // Remove from all centers
+      for (const cid of Object.keys(next)) {
+        next[cid] = next[cid].filter(t => !assetTags.includes(t));
+      }
+      // Add to target
+      next[targetId] = [...(next[targetId] ?? []), ...assetTags];
+      return next;
+    });
+
+    // Update center-bench assignments
+    setCenterBenches(prev => {
+      const next = { ...prev };
+      for (const cid of Object.keys(next)) {
+        next[cid] = next[cid].filter(id => !benchIds.includes(id));
+      }
+      next[targetId] = [...(next[targetId] ?? []), ...benchIds];
+      return next;
+    });
+
+    // Record history
+    const now = new Date();
+    const ts = `${now.toLocaleString("en", { month:"short", day:"numeric" })} ${now.getHours().toString().padStart(2,"0")}:${now.getMinutes().toString().padStart(2,"0")}`;
+    setMoveHistory(prev => [{
+      id: String(Date.now()),
+      ts,
+      items,
+      fromId: srcId, fromName: srcCtr?.city ?? srcId,
+      toId: targetId, toName: tCtr.city,
+      by: "A. Kovalenko",
+    }, ...prev]);
+
+    addToast("Transfer complete", `${items.length} item${items.length > 1 ? "s" : ""} → ${tCtr.city}`, "ok");
+    setSel(new Set());
+    setTransferOpen(false);
+  }
 
   const visible = assets.filter(a => {
     if (filter === "ready") return a.status === "ready";
@@ -229,6 +544,10 @@ export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister,
             <div className="to-bulkbar">
               <b>{sel.size}</b> selected
               <button className="to-btn primary sm" onClick={() => onCheckout([...sel])}>Bulk checkout</button>
+              <button className="to-btn ghost sm" onClick={() => openTransfer([...sel])}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="15 3 21 3 21 9"/><path d="M21 3L10 14"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+                Transfer to center
+              </button>
               <button className="to-btn ghost sm" onClick={() => setSel(new Set())}>Clear selection</button>
             </div>
           )}
@@ -270,7 +589,7 @@ export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister,
                           <div className="to-row" style={{gap:5}}>
                             <button className="to-ract" title="View" onClick={() => onOpenAsset(a.tag)}>{EYE}</button>
                             <button className="to-ract" title="Edit" onClick={() => onEdit ? onEdit(a.tag) : onOpenAsset(a.tag)}>{PEN}</button>
-                            <button className="to-ract" title="Reassign to Test Center" onClick={() => { setReassignTag(a.tag); setTargetCenter(""); }}>{MOVE}</button>
+                            <button className="to-ract" title="Transfer to Test Center" onClick={() => openTransfer([a.tag])}>{MOVE}</button>
                             <button className="to-ract" title="Clone" onClick={() => onClone(a.tag)}>{COPY}</button>
                             <button className="to-ract del" title="Delete" onClick={() => onDelete(a.tag)}>{TRASH}</button>
                           </div>
@@ -499,8 +818,79 @@ export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister,
         </div>
       )}
 
+      {/* Transfers tab */}
+      {tab === "transfers" && (
+        <div className="to-panel">
+          <div className="to-panel-h">
+            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <span className="to-eyebrow">Movement history</span>
+              {moveHistory.length > 0 && <span className="to-chip mute" style={{ fontSize:10 }}>{moveHistory.length} transfers</span>}
+            </div>
+            <button className="to-btn primary sm" onClick={() => openTransfer()}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 3 21 3 21 9"/><path d="M21 3L10 14"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+              New transfer
+            </button>
+          </div>
+          <div className="to-panel-b">
+            {moveHistory.length === 0 ? (
+              <div style={{ textAlign:"center", padding:"40px 20px", color:"var(--ink-4)" }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3" style={{ opacity:.35, marginBottom:10 }}>
+                  <polyline points="15 3 21 3 21 9"/><path d="M21 3L10 14"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                </svg>
+                <div style={{ fontSize:13 }}>No transfers yet.</div>
+                <div style={{ fontSize:11.5, marginTop:4 }}>Use "New transfer" or the move icon on any asset.</div>
+              </div>
+            ) : (
+              <table className="to-tbl">
+                <thead>
+                  <tr>
+                    <th>When</th>
+                    <th>Items</th>
+                    <th>Route</th>
+                    <th>By</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {moveHistory.map(e => {
+                    const fc = CTR_COLORS[e.fromId] ?? { color:"var(--ink-4)", bg:"var(--panel-2)" };
+                    const tc = CTR_COLORS[e.toId]   ?? { color:"var(--ink-4)", bg:"var(--panel-2)" };
+                    return (
+                      <tr key={e.id}>
+                        <td style={{ fontFamily:"var(--mono)", fontSize:12, color:"var(--ink-3)", whiteSpace:"nowrap" }}>{e.ts}</td>
+                        <td>
+                          <div style={{ display:"flex", flexWrap:"wrap", gap:4, maxWidth:280 }}>
+                            {e.items.map(item => (
+                              <span key={item.id} style={{ fontSize:10.5, padding:"1px 7px", borderRadius:5, background:"var(--panel-3)", color:"var(--ink-2)", fontFamily:"var(--mono)" }}>
+                                {item.id}
+                              </span>
+                            ))}
+                          </div>
+                          <div style={{ fontSize:10.5, color:"var(--ink-4)", marginTop:3 }}>
+                            {e.items.filter(i => i.type === "asset").length} asset{e.items.filter(i => i.type === "asset").length !== 1 ? "s" : ""}
+                            {e.items.some(i => i.type === "bench") && ` · ${e.items.filter(i => i.type === "bench").length} bench${e.items.filter(i => i.type === "bench").length !== 1 ? "es" : ""}`}
+                          </div>
+                        </td>
+                        <td>
+                          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                            <span style={{ fontSize:11.5, fontWeight:600, padding:"2px 8px", borderRadius:5, background:fc.bg, color:fc.color }}>{e.fromName}</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-4)" strokeWidth="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                            <span style={{ fontSize:11.5, fontWeight:600, padding:"2px 8px", borderRadius:5, background:tc.bg, color:tc.color }}>{e.toName}</span>
+                          </div>
+                        </td>
+                        <td style={{ fontSize:12.5, color:"var(--ink-2)" }}>{e.by}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+
       <SyncModal open={syncOpen} onClose={() => setSyncOpen(false)} onSynced={() => addToast("Sync complete","3 assets imported · 2 updated · 2 conflicts flagged")} />
       <ScanModal open={scanOpen} onClose={() => setScanOpen(false)} onScanned={tag => { setScanOpen(false); onOpenAsset(tag); }} />
+
       {licModalOpen && (
         <LicenseModal
           onClose={() => setLicModalOpen(false)}
@@ -508,133 +898,16 @@ export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister,
         />
       )}
 
-      {reassignTag && (() => {
-        const asset = assets.find(a => a.tag === reassignTag);
-        if (!asset) return null;
-        const canConfirm = targetCenter.length > 0;
-        return (
-          <div
-            style={{
-              position:"fixed", inset:0,
-              background:"rgba(0,0,0,.46)", backdropFilter:"blur(4px)",
-              display:"flex", alignItems:"center", justifyContent:"center",
-              zIndex:900, padding:20,
-            }}
-            onClick={e => e.target === e.currentTarget && setReassignTag(null)}
-          >
-            <div style={{
-              background:"var(--panel)", borderRadius:14,
-              border:"1px solid var(--line)",
-              width:440, maxWidth:"100%",
-              boxShadow:"0 24px 56px rgba(0,0,0,.32)",
-            }}>
-              {/* Header */}
-              <div style={{
-                padding:"18px 22px", borderBottom:"1px solid var(--line)",
-                display:"flex", alignItems:"flex-start", justifyContent:"space-between",
-              }}>
-                <div>
-                  <div style={{fontSize:15.5,fontWeight:660,color:"var(--ink)"}}>Reassign Asset</div>
-                  <div style={{fontSize:11.5,color:"var(--ink-4)",marginTop:2}}>Move asset to a different Test Center</div>
-                </div>
-                <button className="to-iconbtn" style={{background:"var(--panel-2)"}} onClick={() => setReassignTag(null)}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                </button>
-              </div>
-
-              {/* Body */}
-              <div style={{padding:"20px 22px"}}>
-                {/* Asset info */}
-                <div style={{
-                  padding:"12px 14px", borderRadius:8,
-                  background:"var(--panel-2)", border:"1px solid var(--line)",
-                  marginBottom:20,
-                }}>
-                  <div style={{fontSize:10,fontWeight:600,color:"var(--ink-4)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:5}}>
-                    Selected Asset
-                  </div>
-                  <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    <span style={{fontFamily:"var(--mono)",fontSize:12,padding:"2px 8px",borderRadius:5,background:"var(--panel-3)",color:"var(--brand)",fontWeight:600}}>
-                      {asset.tag}
-                    </span>
-                    <div>
-                      <div style={{fontSize:13,fontWeight:550,color:"var(--ink)"}}>{asset.name}</div>
-                      <div style={{fontSize:11,color:"var(--ink-4)",marginTop:1}}>
-                        Current location: <span style={{color:"var(--ink-2)"}}>{asset.location || "—"}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Center select */}
-                <label style={{fontSize:11,fontWeight:600,color:"var(--ink-3)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:8}}>
-                  Assign to Test Center
-                </label>
-                <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                  {TEST_CENTERS.map(c => {
-                    const colors: Record<string, { color: string; bg: string; border: string }> = {
-                      "TC-MUC": { color:"var(--brand)", bg:"rgba(94,106,210,.08)",  border:"var(--brand)" },
-                      "TC-STR": { color:"var(--warn)",  bg:"rgba(184,134,11,.08)", border:"var(--warn)"  },
-                      "TC-WAW": { color:"var(--ok)",    bg:"rgba(26,150,72,.08)",  border:"var(--ok)"    },
-                    };
-                    const cc = colors[c.id] ?? { color:"var(--ink-3)", bg:"var(--panel-2)", border:"var(--line)" };
-                    const selected = targetCenter === c.id;
-                    return (
-                      <div
-                        key={c.id}
-                        onClick={() => setTargetCenter(c.id)}
-                        style={{
-                          display:"flex", alignItems:"center", gap:12,
-                          padding:"11px 14px", borderRadius:9, cursor:"pointer",
-                          border:`1.5px solid ${selected ? cc.border : "var(--line)"}`,
-                          background: selected ? cc.bg : "var(--panel)",
-                          transition:"all .1s",
-                        }}
-                      >
-                        <span style={{
-                          width:10, height:10, borderRadius:"50%", flexShrink:0,
-                          background: selected ? cc.color : "var(--line-2)",
-                          transition:"background .1s",
-                        }} />
-                        <div style={{flex:1}}>
-                          <div style={{fontSize:13,fontWeight:selected?600:400,color:selected?cc.color:"var(--ink)"}}>{c.name}</div>
-                          <div style={{fontSize:11,color:"var(--ink-4)",marginTop:1}}>{c.city} · {c.country}</div>
-                        </div>
-                        {selected && (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={cc.color} strokeWidth="2.2">
-                            <polyline points="20 6 9 17 4 12"/>
-                          </svg>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div style={{
-                padding:"14px 22px", borderTop:"1px solid var(--line)",
-                display:"flex", justifyContent:"flex-end", gap:8,
-              }}>
-                <button className="to-btn ghost sm" onClick={() => setReassignTag(null)}>Cancel</button>
-                <button
-                  className="to-btn primary sm"
-                  disabled={!canConfirm}
-                  style={{opacity:canConfirm?1:.45}}
-                  onClick={() => {
-                    if (!canConfirm) return;
-                    const ctr = TEST_CENTERS.find(c => c.id === targetCenter);
-                    addToast("Asset reassigned", `${asset.tag} → ${ctr?.city}`, "ok");
-                    setReassignTag(null);
-                  }}
-                >
-                  Confirm reassignment
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {transferOpen && (
+        <TransferSheet
+          preselectedAssets={transferPresel}
+          assets={assets}
+          centerAssets={centerAssets}
+          centerBenches={centerBenches}
+          onClose={() => setTransferOpen(false)}
+          onConfirm={handleTransferConfirm}
+        />
+      )}
     </div>
   );
 }
