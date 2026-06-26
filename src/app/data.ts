@@ -578,3 +578,89 @@ export const TEST_CENTERS: TestCenter[] = [
     assetTags: ["00478", "00466", "00506"],
   },
 ];
+
+// ─── Resource Sharing ──────────────────────────────────────────────────────────
+export type SharingStatus = "pending" | "approved" | "active" | "returned" | "rejected" | "recalled";
+
+export interface ResourceRequest {
+  id: string;
+  requesterId: string;
+  requesterCenter: string;
+  targetCenterId: string;
+  resourceType: "asset" | "bench";
+  resourceIds: string[];
+  resourceLabels: string[];
+  campaignId?: string;
+  purpose: string;
+  startDate: string;
+  endDate: string;
+  status: SharingStatus;
+  approvedBy?: string;
+  rejectReason?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export const SHARING_REQUESTS_INITIAL: ResourceRequest[] = [
+  {
+    id: "SR-001",
+    requesterId: "A. Kovalenko", requesterCenter: "TC-MUC",
+    targetCenterId: "TC-WAW",
+    resourceType: "bench", resourceIds: ["TB-084"], resourceLabels: ["TB-084 · HiL Endurance Rig"],
+    campaignId: "CMP-221", purpose: "ADAS Sensor Fusion — Warsaw HiL rig has the required CAN harness",
+    startDate: "2026-07-01", endDate: "2026-07-14",
+    status: "pending", notes: "Need 2 weeks only — will return before the Q3 campaign starts.",
+    createdAt: "2026-06-25 09:12",
+  },
+  {
+    id: "SR-002",
+    requesterId: "L. Wójcik", requesterCenter: "TC-WAW",
+    targetCenterId: "TC-MUC",
+    resourceType: "asset", resourceIds: ["00516", "00524"], resourceLabels: ["00516 · Audio Amplifier MB", "00524 · Audio Amplifier MB"],
+    campaignId: "CMP-210", purpose: "Audio validation requires 2 amplifiers — Munich has spares",
+    startDate: "2026-06-28", endDate: "2026-07-05",
+    status: "approved", approvedBy: "A. Kovalenko",
+    notes: "Shipped via internal courier, tracking #SPY-4421.",
+    createdAt: "2026-06-23 14:30",
+  },
+  {
+    id: "SR-003",
+    requesterId: "K. Nowak", requesterCenter: "TC-WAW",
+    targetCenterId: "TC-STR",
+    resourceType: "bench", resourceIds: ["TB-156"], resourceLabels: ["TB-156 · Integration Bench C"],
+    purpose: "Short-term integration test while TB-033 is under maintenance",
+    startDate: "2026-06-20", endDate: "2026-06-25",
+    status: "returned", approvedBy: "L. Wójcik",
+    createdAt: "2026-06-18 11:05",
+  },
+  {
+    id: "SR-004",
+    requesterId: "P. Bauer", requesterCenter: "TC-STR",
+    targetCenterId: "TC-WAW",
+    resourceType: "asset", resourceIds: ["00478"], resourceLabels: ["00478 · AV.io 4K Capture Card"],
+    purpose: "Video capture for camera sensor validation campaign",
+    startDate: "2026-07-05", endDate: "2026-07-19",
+    status: "pending", notes: "Can pick up in person on July 4.",
+    createdAt: "2026-06-26 08:44",
+  },
+  {
+    id: "SR-005",
+    requesterId: "S. Marek", requesterCenter: "TC-MUC",
+    targetCenterId: "TC-STR",
+    resourceType: "bench", resourceIds: ["TB-199"], resourceLabels: ["TB-199 · Power Cycle Station"],
+    campaignId: "CMP-212", purpose: "Power Cycle Endurance campaign — MUC station is occupied",
+    startDate: "2026-06-15", endDate: "2026-06-22",
+    status: "rejected", rejectReason: "TB-199 committed to CMP-220 Thermal Endurance, unavailable until Jun 30.",
+    createdAt: "2026-06-13 16:20",
+  },
+  {
+    id: "SR-006",
+    requesterId: "L. Wójcik", requesterCenter: "TC-WAW",
+    targetCenterId: "TC-MUC",
+    resourceType: "asset", resourceIds: ["00516", "00524"], resourceLabels: ["00516 · Audio Amplifier MB", "00524 · Audio Amplifier MB"],
+    campaignId: "CMP-210", purpose: "Audio validation — assets in transit, active loan",
+    startDate: "2026-06-28", endDate: "2026-07-05",
+    status: "active", approvedBy: "A. Kovalenko",
+    createdAt: "2026-06-24 10:00",
+  },
+];

@@ -18,8 +18,9 @@ import { AIChat } from "./components/AIChat";
 import { AssetForm } from "./components/AssetForm";
 import { CreateBenchSheet } from "./components/CreateBenchSheet";
 import { Teams } from "./components/Teams";
+import { ResourceSharing } from "./components/ResourceSharing";
 
-type Screen = "ops" | "assets" | "edge" | "campaigns" | "ai" | "reports" | "members" | "logs" | "roadmap" | "benches" | "centers" | "teams";
+type Screen = "ops" | "assets" | "edge" | "campaigns" | "ai" | "reports" | "members" | "logs" | "roadmap" | "benches" | "centers" | "teams" | "sharing";
 
 interface ToastItem { id: number; title: string; subtitle?: string; type?: string }
 interface DrawerState { open: boolean; type: "dut" | "asset" | null; id: string | null }
@@ -29,12 +30,13 @@ interface AIAnswer { q: string; summary: string; rows?: typeof DATA.duts }
 const TITLES: Record<Screen, string> = {
   ops:"Live Dashboard", assets:"Assets", edge:"Edge & Telemetry", campaigns:"Campaigns",
   ai:"AI Insights", reports:"Reports", members:"Members", logs:"Audit Logs", roadmap:"Future modules",
-  benches:"Test Benches", centers:"Test Centers", teams:"Teams",
+  benches:"Test Benches", centers:"Test Centers", teams:"Teams", sharing:"Resource Sharing",
 };
 
 const NAV: { screen: Screen; label: string; icon: string; group: string; soon?: boolean; badge?: string }[] = [
   {group:"Operate", screen:"ops", label:"Live Dashboard", icon:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'},
   {group:"", screen:"centers", label:"Test Centers", icon:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>'},
+  {group:"", screen:"sharing", label:"Resource Sharing", icon:'<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>'},
   {group:"", screen:"benches", label:"Test Benches", icon:'<rect x="2" y="3" width="20" height="5" rx="1.5"/><rect x="2" y="10" width="20" height="5" rx="1.5"/><rect x="2" y="17" width="20" height="4" rx="1.5"/><circle cx="18" cy="5.5" r="1.2" fill="currentColor"/><circle cx="18" cy="12.5" r="1.2" fill="currentColor"/>'},
   {group:"", screen:"assets", label:"Assets", icon:'<rect x="3" y="4" width="18" height="5" rx="1.5"/><rect x="3" y="10" width="18" height="5" rx="1.5"/><rect x="3" y="16" width="18" height="4" rx="1.5"/><circle cx="7" cy="6.5" r="1" fill="currentColor"/><circle cx="7" cy="12.5" r="1" fill="currentColor"/>'},
   {group:"", screen:"campaigns", label:"Campaigns", icon:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>'},
@@ -340,10 +342,11 @@ export default function App() {
             {screen === "campaigns" && <Campaigns addToast={addToast} />}
             {screen === "ai" && <AIInsights answer={aiAnswer} onQuery={handleQuery} onOpenDUT={openDUTDrawer} />}
             {screen === "reports" && <Reports addToast={addToast} />}
-            {screen === "teams" && <Teams addToast={addToast} />}
+            {screen === "teams"   && <Teams addToast={addToast} />}
             {screen === "members" && <Members />}
             {screen === "logs"    && <Logs />}
             {screen === "roadmap" && <Roadmap />}
+            {screen === "sharing" && <ResourceSharing addToast={addToast} />}
             {screen === "centers" && (
               <TestCenters
                 centers={TEST_CENTERS}
