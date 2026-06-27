@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { DATA } from "../data";
+import { CampaignSimulator } from "./AIInsights";
 
 interface Props {
   addToast: (t: string, s?: string, type?: string) => void;
@@ -18,7 +20,10 @@ const RESOURCES: [string, number[]][] = [
 ];
 
 export function Campaigns({ addToast }: Props) {
+  const [simOpen, setSimOpen] = useState(false);
+
   return (
+    <>
     <div className="to-screen">
       <div className="to-page-head">
         <div>
@@ -32,6 +37,10 @@ export function Campaigns({ addToast }: Props) {
               <span key={s} className="to-ibadge"><span className="sd" style={{background:i===2?"var(--warn)":"var(--ok)"}} />{s}</span>
             ))}
           </div>
+          <button className="to-btn ghost sm" onClick={() => setSimOpen(true)}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+            Simulate
+          </button>
           <button className="to-btn primary sm" onClick={() => addToast("New campaign","Opening campaign builder…","info")}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 5v14M5 12h14"/></svg>
             New campaign
@@ -99,5 +108,30 @@ export function Campaigns({ addToast }: Props) {
         </div>
       </div>
     </div>
+
+    {/* Campaign Simulator modal */}
+    {simOpen && (
+      <div
+        style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", backdropFilter:"blur(4px)", zIndex:1100, overflowY:"auto", padding:"24px 20px" }}
+        onClick={e => e.target === e.currentTarget && setSimOpen(false)}
+      >
+        <div style={{ maxWidth:980, margin:"0 auto", background:"var(--panel)", borderRadius:14, border:"1px solid var(--line-2)", boxShadow:"0 24px 64px rgba(0,0,0,.35)" }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 24px 0" }}>
+            <div>
+              <div style={{ fontSize:11, fontWeight:600, color:"var(--ink-4)", textTransform:"uppercase", letterSpacing:".07em", marginBottom:4 }}>Campaign Planning</div>
+              <div style={{ fontSize:18, fontWeight:660, color:"var(--ink)" }}>Campaign Simulator</div>
+            </div>
+            <button onClick={() => setSimOpen(false)}
+              style={{ width:32, height:32, borderRadius:8, border:"1px solid var(--line-2)", background:"var(--panel-2)", display:"grid", placeItems:"center", cursor:"pointer", color:"var(--ink-3)" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div style={{ padding:"16px 24px 24px" }}>
+            <CampaignSimulator />
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

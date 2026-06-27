@@ -1,29 +1,16 @@
-import { useState } from "react";
-import { DATA, NL_QUERIES, DUT, TEST_CENTERS } from "../data";
+import { useState, useEffect } from "react";
+import { DATA, NL_QUERIES, DUT, TEST_CENTERS, BENCHES_INITIAL } from "../data";
 import { gaugeSVG, areaForecastSVG } from "../utils";
 
 interface AIAnswer { q: string; summary: string; rows?: DUT[] }
 
 // ─── Campaign Simulator ───────────────────────────────────────────────────────
 
-const CENTER_BENCHES: Record<string, { id: string; load: number; status: "Up"|"Down"|"Maintenance"|"Degraded" }[]> = {
-  "TC-MUC": [
-    { id:"TB-01", load:94, status:"Up" }, { id:"TB-02", load:88, status:"Up" },
-    { id:"TB-05", load:91, status:"Up" }, { id:"TB-08", load:85, status:"Up" },
-    { id:"TB-11", load:92, status:"Up" }, { id:"TB-03", load:61, status:"Up" },
-    { id:"TB-07", load:28, status:"Up" }, { id:"TB-12", load:12, status:"Up" },
-  ],
-  "TC-STR": [
-    { id:"TB-06", load:70, status:"Up" }, { id:"TB-10", load:55, status:"Up" },
-    { id:"TB-13", load:38, status:"Up" },
-  ],
-  "TC-WAW": [
-    { id:"TB-04", load:0,  status:"Down"        },
-    { id:"TB-09", load:0,  status:"Maintenance" },
-    { id:"TB-15", load:34, status:"Up"          },
-    { id:"TB-16", load:21, status:"Up"          },
-  ],
-};
+function benchesForCenter(centerId: string) {
+  const ctr = TEST_CENTERS.find(c => c.id === centerId);
+  if (!ctr) return [];
+  return BENCHES_INITIAL.filter(b => ctr.benchIds.includes(b.id));
+}
 
 // How many DUTs one bench handles in parallel per campaign type
 const DUT_PER_BENCH: Record<string, number> = {
@@ -48,6 +35,7 @@ interface SimParams {
   durationWeeks: number;
   teamSize: number;
   priority: "high" | "medium" | "low";
+  selectedBenchIds: string[];
 }
 
 interface SimResult {
@@ -68,6 +56,7 @@ interface SimResult {
   startDate: string;
   endDate: string;
   feasible: boolean;
+  totalBenches: number;
 }
 
 function addDays(d: Date, n: number): Date {
@@ -78,11 +67,16 @@ function fmtDate(d: Date): string {
 }
 
 function runSimulation(p: SimParams): SimResult {
-  const benches = CENTER_BENCHES[p.centerId] ?? [];
-  const available = benches.filter(b => b.status === "Up" && b.load < 90);
+  const allCenter = benchesForCenter(p.centerId);
+  const benches = p.selectedBenchIds.length > 0
+    ? BENCHES_INITIAL.filter(b => p.selectedBenchIds.includes(b.id))
+    : allCenter;
+  const available = benches.filter(b => b.status === "Up" || b.status === "Degraded");
   const availCt = Math.max(1, available.length);
+  // Estimate load from status distribution (no raw % in data model)
+  const statusLoad: Record<string, number> = { Up: 62, Degraded: 85, Down: 0, Maintenance: 0 };
   const avgLoad = benches.length > 0
-    ? Math.round(benches.reduce((s,b) => s + b.load, 0) / benches.length)
+    ? Math.round(benches.reduce((s, b) => s + (statusLoad[b.status] ?? 50), 0) / benches.length)
     : 50;
 
   const dpp = DUT_PER_BENCH[p.campaignType] ?? 3;
@@ -146,23 +140,52 @@ function runSimulation(p: SimParams): SimResult {
     phases, risks, recommendations: recs,
     startDate: fmtDate(start), endDate: fmtDate(end),
     feasible,
+    totalBenches: benches.length,
   };
 }
 
 const RISK_COLORS = { low:"var(--ok)", med:"var(--warn)", high:"var(--bad)" };
 const RISK_LABELS = { low:"Low", med:"Medium", high:"High" };
 
-function CampaignSimulator() {
+const BENCH_STATUS_COLOR: Record<string, string> = {
+  Up: "var(--ok)", Degraded: "var(--warn)", Down: "var(--bad)", Maintenance: "var(--ink-3)",
+};
+
+export function CampaignSimulator() {
+  const defaultCenterId = "TC-MUC";
+  const defaultBenches = benchesForCenter(defaultCenterId).filter(b => b.status === "Up").map(b => b.id);
+
   const [params, setParams] = useState<SimParams>({
-    centerId: "TC-MUC",
+    centerId: defaultCenterId,
     campaignType: "Regression",
     dutCount: 6,
     durationWeeks: 3,
     teamSize: 3,
     priority: "medium",
+    selectedBenchIds: defaultBenches,
   });
   const [result, setResult] = useState<SimResult | null>(null);
   const [running, setRunning] = useState(false);
+
+  // When center changes, auto-select all "Up" benches of the new center
+  useEffect(() => {
+    const upIds = benchesForCenter(params.centerId)
+      .filter(b => b.status === "Up")
+      .map(b => b.id);
+    setParams(p => ({ ...p, selectedBenchIds: upIds }));
+    setResult(null);
+  }, [params.centerId]);
+
+  const centerBenches = benchesForCenter(params.centerId);
+
+  function toggleBench(id: string) {
+    setParams(p => ({
+      ...p,
+      selectedBenchIds: p.selectedBenchIds.includes(id)
+        ? p.selectedBenchIds.filter(x => x !== id)
+        : [...p.selectedBenchIds, id],
+    }));
+  }
 
   function handleRun() {
     setRunning(true);
@@ -237,6 +260,60 @@ function CampaignSimulator() {
             </div>
           </div>
 
+          {/* Bench picker */}
+          <div style={{ marginBottom:20 }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+              <label style={{ fontSize:11, fontWeight:600, color:"var(--ink-3)", textTransform:"uppercase", letterSpacing:".06em" }}>
+                Test Benches — select for simulation
+              </label>
+              <div style={{ display:"flex", gap:6 }}>
+                <button style={{ fontSize:11, color:"var(--brand)", background:"none", border:"none", cursor:"pointer", padding:0 }}
+                  onClick={() => setParams(p => ({ ...p, selectedBenchIds: centerBenches.filter(b => b.status === "Up").map(b => b.id) }))}>
+                  Select Up only
+                </button>
+                <span style={{ color:"var(--line-2)" }}>·</span>
+                <button style={{ fontSize:11, color:"var(--brand)", background:"none", border:"none", cursor:"pointer", padding:0 }}
+                  onClick={() => setParams(p => ({ ...p, selectedBenchIds: centerBenches.map(b => b.id) }))}>
+                  All
+                </button>
+                <span style={{ color:"var(--line-2)" }}>·</span>
+                <button style={{ fontSize:11, color:"var(--ink-4)", background:"none", border:"none", cursor:"pointer", padding:0 }}
+                  onClick={() => setParams(p => ({ ...p, selectedBenchIds: [] }))}>
+                  Clear
+                </button>
+              </div>
+            </div>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
+              {centerBenches.map(b => {
+                const sel = params.selectedBenchIds.includes(b.id);
+                const sc = BENCH_STATUS_COLOR[b.status] ?? "var(--ink-4)";
+                const avail = b.status === "Up" || b.status === "Degraded";
+                return (
+                  <label key={b.id} title={`${b.name} · ${b.status}`} style={{
+                    display:"flex", alignItems:"center", gap:6,
+                    padding:"5px 10px", borderRadius:7, cursor:"pointer",
+                    border:`1.5px solid ${sel ? sc : "var(--line-2)"}`,
+                    background: sel ? (sc + "18") : "var(--panel-2)",
+                    opacity: avail ? 1 : 0.55,
+                  }}>
+                    <input type="checkbox" checked={sel} onChange={() => toggleBench(b.id)}
+                      style={{ accentColor: sc, width:12, height:12, margin:0 }} />
+                    <span style={{ width:7, height:7, borderRadius:"50%", background:sc, flexShrink:0 }} />
+                    <span style={{ fontSize:11.5, fontFamily:"var(--mono)", fontWeight:600, color:"var(--ink-2)" }}>{b.id}</span>
+                    <span style={{ fontSize:10.5, color:"var(--ink-4)", maxWidth:90, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{b.name}</span>
+                  </label>
+                );
+              })}
+            </div>
+            {params.selectedBenchIds.length === 0 && (
+              <div style={{ fontSize:12, color:"var(--warn)", marginTop:6 }}>⚠ No benches selected — simulation will use center defaults</div>
+            )}
+            <div style={{ fontSize:11, color:"var(--ink-4)", marginTop:6 }}>
+              {params.selectedBenchIds.length} of {centerBenches.length} benches selected ·{" "}
+              {centerBenches.filter(b => params.selectedBenchIds.includes(b.id) && (b.status === "Up" || b.status === "Degraded")).length} available for scheduling
+            </div>
+          </div>
+
           {/* Sliders row */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:20 }}>
             {([
@@ -301,7 +378,7 @@ function CampaignSimulator() {
               { label:"Total Cost", value: fmtEur(result.totalCost), sub: "incl. " + Math.round(OVERHEAD_RATE*100) + "% overhead", color:"var(--ink)" },
               { label:"Bench Hours", value: result.benchHoursTotal.toLocaleString(), sub: result.benchesNeeded + " bench" + (result.benchesNeeded!==1?"es":"") + " × " + Math.round(result.actualWeeks*7) + "d", color:"var(--ok)" },
               { label:"Rec. Team", value: result.recommendedTeam + " FTE", sub: "You set: " + params.teamSize + " FTE", color: params.teamSize < result.recommendedTeam ? "var(--bad)" : "var(--ok)" },
-              { label:"Center Load", value: result.centerLoadPct + "%", sub: result.availableBenches + "/" + (CENTER_BENCHES[params.centerId]?.length ?? 0) + " benches free", color: result.centerLoadPct > 70 ? "var(--bad)" : result.centerLoadPct > 50 ? "var(--warn)" : "var(--ok)" },
+              { label:"Center Load", value: result.centerLoadPct + "%", sub: result.availableBenches + "/" + result.totalBenches + " benches avail.", color: result.centerLoadPct > 70 ? "var(--bad)" : result.centerLoadPct > 50 ? "var(--warn)" : "var(--ok)" },
             ].map(k => (
               <div key={k.label} className="to-kpi" style={{ padding:"14px 16px" }}>
                 <div className="lab">{k.label}</div>
@@ -466,30 +543,16 @@ const REC_ICONS: Record<string, string> = {
 };
 
 export function AIInsights({ answer, onQuery, onOpenDUT }: Props) {
-  const [tab, setTab] = useState<"insights"|"simulate">("insights");
-
   return (
     <div className="to-screen">
       <div className="to-page-head">
         <div>
           <div className="to-kicker">Powered by AI</div>
           <h1>AI Insights</h1>
-          <div className="lede" style={{color:"var(--ink-2)",fontSize:13,marginTop:5}}>KPI trend analysis · 30-day forecasting · campaign simulation · failure prediction · natural-language queries</div>
+          <div className="lede" style={{color:"var(--ink-2)",fontSize:13,marginTop:5}}>KPI trend analysis · 30-day forecasting · failure prediction · natural-language queries</div>
         </div>
         <span className="to-chip brand"><span className="to-dot brand" />Model updated 06:00</span>
       </div>
-
-      <div className="to-tabs" style={{ marginBottom:20 }}>
-        <button className={`to-tab ${tab==="insights"?"on":""}`} onClick={() => setTab("insights")}>Insights &amp; Forecast</button>
-        <button className={`to-tab ${tab==="simulate"?"on":""}`} onClick={() => setTab("simulate")}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight:5 }}><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          Campaign Simulator
-        </button>
-      </div>
-
-      {tab === "simulate" && <CampaignSimulator />}
-
-      {tab === "insights" && (<>
 
       {answer ? (
         <div className="to-nl-answer">
@@ -591,7 +654,6 @@ export function AIInsights({ answer, onQuery, onOpenDUT }: Props) {
           <div className="to-alert" style={{borderBottom:0}}><span className="ad" style={{background:"var(--brand)"}} /><div><div className="ttl">Defect dedup — 14 reports → 3 root causes</div><div style={{fontFamily:"var(--mono)",fontSize:10,color:"var(--ink-3)",marginTop:2}}>saved ~5h triage this week</div></div></div>
         </div>
       </div>
-      </>)}
     </div>
   );
 }

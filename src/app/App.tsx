@@ -19,8 +19,9 @@ import { AssetForm } from "./components/AssetForm";
 import { CreateBenchSheet } from "./components/CreateBenchSheet";
 import { Teams } from "./components/Teams";
 import { ResourceSharing } from "./components/ResourceSharing";
+import { IntegrationHub } from "./components/IntegrationHub";
 
-type Screen = "ops" | "assets" | "edge" | "campaigns" | "ai" | "reports" | "members" | "logs" | "roadmap" | "benches" | "centers" | "teams" | "sharing";
+type Screen = "ops" | "assets" | "edge" | "campaigns" | "ai" | "reports" | "members" | "logs" | "roadmap" | "benches" | "centers" | "teams" | "sharing" | "integrations";
 
 interface ToastItem { id: number; title: string; subtitle?: string; type?: string }
 interface DrawerState { open: boolean; type: "dut" | "asset" | null; id: string | null }
@@ -30,7 +31,7 @@ interface AIAnswer { q: string; summary: string; rows?: typeof DATA.duts }
 const TITLES: Record<Screen, string> = {
   ops:"Live Dashboard", assets:"Assets", edge:"Edge & Telemetry", campaigns:"Campaigns",
   ai:"AI Insights", reports:"Reports", members:"Members", logs:"Audit Logs", roadmap:"Future modules",
-  benches:"Test Benches", centers:"Test Centers", teams:"Teams", sharing:"Resource Sharing",
+  benches:"Test Benches", centers:"Test Centers", teams:"Teams", sharing:"Resource Sharing", integrations:"Integration Hub",
 };
 
 const NAV: { screen: Screen; label: string; icon: string; group: string; soon?: boolean; badge?: string }[] = [
@@ -41,6 +42,7 @@ const NAV: { screen: Screen; label: string; icon: string; group: string; soon?: 
   {group:"", screen:"assets", label:"Assets", icon:'<rect x="3" y="4" width="18" height="5" rx="1.5"/><rect x="3" y="10" width="18" height="5" rx="1.5"/><rect x="3" y="16" width="18" height="4" rx="1.5"/><circle cx="7" cy="6.5" r="1" fill="currentColor"/><circle cx="7" cy="12.5" r="1" fill="currentColor"/>'},
   {group:"", screen:"campaigns", label:"Campaigns", icon:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>'},
   {group:"Intelligence", screen:"ai", label:"AI Insights", icon:'<path d="M9 3a3 3 0 0 0-3 3 3 3 0 0 0-1 5.8V18a3 3 0 0 0 4 2.8M9 3a2.5 2.5 0 0 1 3 2.4v13.2A2.5 2.5 0 0 1 9 21M15 3a3 3 0 0 1 3 3 3 3 0 0 1 1 5.8V18a3 3 0 0 1-4 2.8M15 3a2.5 2.5 0 0 0-3 2.4"/>'},
+  {group:"", screen:"integrations", label:"Integration Hub", icon:'<path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/><circle cx="18" cy="8" r="2"/><circle cx="12" cy="2" r="2"/><circle cx="6" cy="12" r="2"/>'},
   {group:"", screen:"reports", label:"Reports", icon:'<path d="M5 3h9l5 5v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5M8 13h8M8 17h5"/>'},
   {group:"Users", screen:"teams",   label:"Teams",      icon:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'},
   {group:"",      screen:"members", label:"Members",    icon:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="18" cy="9" r="2.2"/><path d="M21.5 20c0-2.4-1.6-4.3-3.5-4.3"/>'},
@@ -347,6 +349,7 @@ export default function App() {
             {screen === "logs"    && <Logs />}
             {screen === "roadmap" && <Roadmap />}
             {screen === "sharing" && <ResourceSharing addToast={addToast} />}
+            {screen === "integrations" && <IntegrationHub addToast={addToast} />}
             {screen === "centers" && (
               <TestCenters
                 centers={TEST_CENTERS}

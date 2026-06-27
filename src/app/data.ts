@@ -664,3 +664,154 @@ export const SHARING_REQUESTS_INITIAL: ResourceRequest[] = [
     createdAt: "2026-06-24 10:00",
   },
 ];
+
+// ─── Integration Hub ────────────────────────────────────────────────────────────
+
+export type IntegrationStatus = "connected" | "disconnected" | "error" | "syncing";
+export type IntegrationDirection = "inbound" | "outbound" | "bidirectional";
+export type AuthType = "apiKey" | "oauth" | "basic";
+export type SyncInterval = "realtime" | "hourly" | "daily" | "manual";
+export type IntegrationType = "jira" | "grafana" | "testRail" | "jenkins" | "gitlab" | "slack";
+
+export interface FieldMapping { source: string; target: string; transform?: string; }
+
+export interface IntegrationConfig {
+  url: string;
+  authType: AuthType;
+  apiKey?: string;
+  project?: string;
+  syncInterval: SyncInterval;
+  lastSync?: string;
+  itemsSynced?: number;
+  errorCount?: number;
+}
+
+export interface Integration {
+  id: string;
+  type: IntegrationType;
+  label: string;
+  status: IntegrationStatus;
+  direction: IntegrationDirection;
+  config: IntegrationConfig;
+  webhookUrl?: string;
+  mappings: FieldMapping[];
+  description: string;
+}
+
+export interface SyncEvent {
+  id: string;
+  integrationId: string;
+  integrationType: IntegrationType;
+  integrationLabel: string;
+  direction: "inbound" | "outbound";
+  operation: string;
+  status: "success" | "failed" | "pending";
+  itemsCount: number;
+  timestamp: string;
+  errorMessage?: string;
+  details?: string;
+}
+
+export const INTEGRATIONS_INITIAL: Integration[] = [
+  {
+    id: "INT-001", type: "jira", label: "Jira Cloud", status: "connected", direction: "bidirectional",
+    description: "Sync defects and test results. Failed test cases automatically create Jira bugs with full context.",
+    config: {
+      url: "https://spyrosoft.atlassian.net",
+      authType: "apiKey", apiKey: "••••••••••••ATBB",
+      project: "TESTOPS", syncInterval: "realtime",
+      lastSync: "2026-06-26 09:41", itemsSynced: 247, errorCount: 0,
+    },
+    webhookUrl: "https://testops.spyrosoft.com/webhooks/jira/wh_4a8f",
+    mappings: [
+      { source: "campaign.failedTests", target: "jira.bug", transform: "create" },
+      { source: "jira.issue.status", target: "campaign.defectStatus" },
+      { source: "campaign.name", target: "jira.issue.summary", transform: "prefix:[TestOps]" },
+    ],
+  },
+  {
+    id: "INT-002", type: "grafana", label: "Grafana Cloud", status: "connected", direction: "outbound",
+    description: "Push bench utilization, campaign KPIs, and DUT health metrics to Grafana dashboards.",
+    config: {
+      url: "https://spyrosoft.grafana.net",
+      authType: "apiKey", apiKey: "••••••••glsa_x",
+      syncInterval: "hourly",
+      lastSync: "2026-06-26 09:00", itemsSynced: 1842, errorCount: 2,
+    },
+    mappings: [
+      { source: "bench.utilization", target: "grafana.metric:bench_load_pct" },
+      { source: "campaign.status", target: "grafana.annotation" },
+      { source: "dut.uptime", target: "grafana.metric:dut_uptime" },
+    ],
+  },
+  {
+    id: "INT-003", type: "testRail", label: "TestRail", status: "connected", direction: "bidirectional",
+    description: "Bidirectional sync of test cases, test runs, and pass/fail results.",
+    config: {
+      url: "https://spyrosoft.testrail.io",
+      authType: "basic", apiKey: "••••••••",
+      project: "P-12 Automotive HiL", syncInterval: "daily",
+      lastSync: "2026-06-26 06:00", itemsSynced: 932, errorCount: 0,
+    },
+    webhookUrl: "https://testops.spyrosoft.com/webhooks/testrail/wh_9c2d",
+    mappings: [
+      { source: "campaign.testResults", target: "testRail.run" },
+      { source: "testRail.testCase", target: "campaign.testSpec" },
+    ],
+  },
+  {
+    id: "INT-004", type: "jenkins", label: "Jenkins CI", status: "error", direction: "inbound",
+    description: "Receive build completion events from Jenkins to auto-trigger test campaigns.",
+    config: {
+      url: "https://ci.spyrosoft.internal:8080",
+      authType: "apiKey", apiKey: "••••••••",
+      syncInterval: "realtime",
+      lastSync: "2026-06-25 18:33", itemsSynced: 58, errorCount: 4,
+    },
+    webhookUrl: "https://testops.spyrosoft.com/webhooks/jenkins/wh_7e1b",
+    mappings: [
+      { source: "jenkins.buildResult", target: "campaign.trigger" },
+      { source: "jenkins.commitHash", target: "campaign.buildRef" },
+    ],
+  },
+  {
+    id: "INT-005", type: "gitlab", label: "GitLab CI", status: "disconnected", direction: "bidirectional",
+    description: "Sync pipeline results and post test summaries back to GitLab MR comments.",
+    config: {
+      url: "https://gitlab.spyrosoft.com",
+      authType: "oauth",
+      syncInterval: "manual",
+      errorCount: 0,
+    },
+    mappings: [],
+  },
+  {
+    id: "INT-006", type: "slack", label: "Slack", status: "connected", direction: "outbound",
+    description: "Post campaign alerts, bench failures, and daily digests to Slack channels.",
+    config: {
+      url: "https://hooks.slack.com/services/T0X••••/B0X••••/••••••",
+      authType: "apiKey", apiKey: "xoxb-••••••••",
+      project: "#testops-alerts", syncInterval: "realtime",
+      lastSync: "2026-06-26 09:38", itemsSynced: 312, errorCount: 0,
+    },
+    mappings: [
+      { source: "bench.status=Down", target: "slack.alert:#testops-alerts" },
+      { source: "campaign.status=completed", target: "slack.message:#testops-alerts" },
+    ],
+  },
+];
+
+export const SYNC_EVENTS_INITIAL: SyncEvent[] = [
+  { id:"SYN-001", integrationId:"INT-001", integrationType:"jira", integrationLabel:"Jira Cloud", direction:"outbound", operation:"Export failed tests → Jira bugs", status:"success", itemsCount:7, timestamp:"2026-06-26 09:41", details:"CMP-201 · 7 failed cases → TESTOPS-1284…1290" },
+  { id:"SYN-002", integrationId:"INT-002", integrationType:"grafana", integrationLabel:"Grafana Cloud", direction:"outbound", operation:"Push bench utilization metrics", status:"success", itemsCount:156, timestamp:"2026-06-26 09:00", details:"bench_load_pct, dut_uptime, campaign_throughput" },
+  { id:"SYN-003", integrationId:"INT-003", integrationType:"testRail", integrationLabel:"TestRail", direction:"outbound", operation:"Sync test run results", status:"success", itemsCount:48, timestamp:"2026-06-26 06:00", details:"Run R-4419 — CMP-201 regression suite" },
+  { id:"SYN-004", integrationId:"INT-004", integrationType:"jenkins", integrationLabel:"Jenkins CI", direction:"inbound", operation:"Receive build trigger", status:"failed", itemsCount:0, timestamp:"2026-06-25 18:33", errorMessage:"Connection refused — CI server unreachable on port 8080", details:"Build #1194 · branch: release/v2.4" },
+  { id:"SYN-005", integrationId:"INT-001", integrationType:"jira", integrationLabel:"Jira Cloud", direction:"inbound", operation:"Pull defect status updates", status:"success", itemsCount:12, timestamp:"2026-06-25 15:20", details:"TESTOPS-1270…1281 status synced" },
+  { id:"SYN-006", integrationId:"INT-002", integrationType:"grafana", integrationLabel:"Grafana Cloud", direction:"outbound", operation:"Push bench utilization metrics", status:"failed", itemsCount:0, timestamp:"2026-06-25 14:00", errorMessage:"Rate limit exceeded — Grafana Free tier (10k writes/hr)", details:"Retry scheduled in 60 min" },
+  { id:"SYN-007", integrationId:"INT-006", integrationType:"slack", integrationLabel:"Slack", direction:"outbound", operation:"Alert — TB-04 Down", status:"success", itemsCount:1, timestamp:"2026-06-25 11:15", details:"#testops-alerts — TB-04 node unreachable" },
+  { id:"SYN-008", integrationId:"INT-003", integrationType:"testRail", integrationLabel:"TestRail", direction:"inbound", operation:"Import test cases from TestRail", status:"success", itemsCount:214, timestamp:"2026-06-25 06:00", details:"Suite S-221 updated — 214 cases imported" },
+  { id:"SYN-009", integrationId:"INT-004", integrationType:"jenkins", integrationLabel:"Jenkins CI", direction:"inbound", operation:"Receive build trigger", status:"failed", itemsCount:0, timestamp:"2026-06-24 22:10", errorMessage:"SSL certificate verification failed", details:"Build #1192 · branch: main" },
+  { id:"SYN-010", integrationId:"INT-001", integrationType:"jira", integrationLabel:"Jira Cloud", direction:"outbound", operation:"Export campaign report", status:"success", itemsCount:1, timestamp:"2026-06-24 17:00", details:"CMP-205 final report → TESTOPS-1265" },
+  { id:"SYN-011", integrationId:"INT-006", integrationType:"slack", integrationLabel:"Slack", direction:"outbound", operation:"Daily digest", status:"success", itemsCount:1, timestamp:"2026-06-24 08:00", details:"Morning summary — 4 campaigns active, 1 delayed" },
+  { id:"SYN-012", integrationId:"INT-002", integrationType:"grafana", integrationLabel:"Grafana Cloud", direction:"outbound", operation:"Push bench utilization metrics", status:"success", itemsCount:148, timestamp:"2026-06-24 09:00", details:"bench_load_pct, dut_uptime, campaign_throughput" },
+];
