@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { DATA } from "../data";
 import { CampaignSimulator } from "./AIInsights";
+import { useRole } from "../roleContext";
 
 interface Props {
   addToast: (t: string, s?: string, type?: string) => void;
@@ -20,6 +21,8 @@ const RESOURCES: [string, number[]][] = [
 ];
 
 export function Campaigns({ addToast }: Props) {
+  const { can } = useRole();
+  const mayEdit = can("campaign.edit"); // Manager + Test Engineer
   const [simOpen, setSimOpen] = useState(false);
 
   return (
@@ -41,7 +44,8 @@ export function Campaigns({ addToast }: Props) {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
             Simulate
           </button>
-          <button className="to-btn primary sm" onClick={() => addToast("New campaign","Opening campaign builder…","info")}>
+          <button className="to-btn primary sm" onClick={() => mayEdit && addToast("New campaign","Opening campaign builder…","info")} disabled={!mayEdit}
+            title={mayEdit ? undefined : "Requires Manager or Test Engineer role"} style={{ opacity: mayEdit ? 1 : 0.45, cursor: mayEdit ? "pointer" : "not-allowed" }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 5v14M5 12h14"/></svg>
             New campaign
           </button>

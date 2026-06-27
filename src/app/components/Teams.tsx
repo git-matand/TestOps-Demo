@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { TEST_CENTERS, BENCHES_INITIAL } from "../data";
+import { useRole } from "../roleContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Avail = "Available" | "Busy" | "On Leave";
@@ -85,6 +86,8 @@ function Av({ initials, size = 28 }: { initials: string; size?: number }) {
 function TeamRow({
   team, expanded, onToggle, onEdit,
 }: { team: Team; expanded: boolean; onToggle: () => void; onEdit: () => void }) {
+  const { can } = useRole();
+  const mayManage = can("team.manage");
   const c = CTR[team.centerId] ?? CTR[""];
   const members = team.members
     .map(m => ({ ...m, eng: ENGINEERS.find(e => e.id === m.engineerId) }))
@@ -196,7 +199,10 @@ function TeamRow({
         <td style={{ padding:"14px 14px 14px 12px", verticalAlign:"middle", textAlign:"right" }}>
           <button
             className="to-btn ghost sm"
-            onClick={e => { e.stopPropagation(); onEdit(); }}
+            disabled={!mayManage}
+            title={mayManage ? undefined : "Requires Manager role"}
+            style={{ opacity: mayManage ? 1 : 0.45, cursor: mayManage ? "pointer" : "not-allowed" }}
+            onClick={e => { e.stopPropagation(); if (mayManage) onEdit(); }}
           >
             Edit team
           </button>
@@ -700,6 +706,8 @@ function RosterCard({ addToast }: { addToast: (t: string, s?: string, type?: str
 interface Props { addToast: (t: string, s?: string, type?: string) => void }
 
 export function Teams({ addToast }: Props) {
+  const { can } = useRole();
+  const mayManage = can("team.manage"); // Manager only
   const [teams, setTeams] = useState<Team[]>(INITIAL_TEAMS);
   const [builderOpen, setBuilderOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -766,7 +774,8 @@ export function Teams({ addToast }: Props) {
           </div>
         </div>
         <div className="to-head-actions">
-          <button className="to-btn primary sm" onClick={openNew}>
+          <button className="to-btn primary sm" onClick={() => mayManage && openNew()} disabled={!mayManage}
+            title={mayManage ? undefined : "Requires Manager role"} style={{ opacity: mayManage ? 1 : 0.45, cursor: mayManage ? "pointer" : "not-allowed" }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 5v14M5 12h14"/>
             </svg>

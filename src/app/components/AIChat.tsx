@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from "react";
+import { answerQuery } from "../lib/chatNlu";
 
 interface Message {
   id: number;
   role: "user" | "ai";
   text: string;
   ts: string;
+  assumptions?: string;
 }
 
 interface Props {
@@ -13,10 +15,10 @@ interface Props {
 }
 
 const CHIPS = [
-  "What's at risk this week?",
-  "Show underutilized benches",
+  "Simulate a 6-week endurance campaign in Warsaw with 12 DUTs",
+  "Which center has the lowest bench load?",
   "Where can I cut cost?",
-  "Which campaigns are delayed?",
+  "What's at risk across all centers?",
   "Predict next failure",
   "Summarize TB-04 status",
 ];
@@ -104,7 +106,11 @@ export function AIChat({ open, onClose }: Props) {
     setInput("");
     setThinking(true);
     setTimeout(() => {
-      const aiMsg: Message = { id: Date.now() + 1, role: "ai", text: getMock(trimmed), ts: now() };
+      // Deterministic NLU first (real engine + live data); scripted fallback otherwise.
+      const nlu = answerQuery(trimmed);
+      const aiMsg: Message = nlu
+        ? { id: Date.now() + 1, role: "ai", text: nlu.text, ts: now(), assumptions: nlu.assumptions }
+        : { id: Date.now() + 1, role: "ai", text: getMock(trimmed), ts: now() };
       setMsgs(prev => [...prev, aiMsg]);
       setThinking(false);
     }, 800 + Math.random() * 500);
@@ -229,6 +235,16 @@ export function AIChat({ open, onClose }: Props) {
                 border: msg.role === "ai" ? "1px solid var(--line)" : "none",
               }}>
                 <MsgText text={msg.text} />
+                {msg.assumptions && (
+                  <div style={{
+                    marginTop: 8, paddingTop: 7, borderTop: "1px dashed var(--line-2)",
+                    fontSize: 10.5, color: "var(--ink-4)", fontFamily: "var(--mono)",
+                    display: "flex", gap: 5, alignItems: "flex-start",
+                  }}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg>
+                    <span>Assumptions: {msg.assumptions}</span>
+                  </div>
+                )}
                 <div style={{
                   fontSize: 10, marginTop: 5,
                   color: msg.role === "user" ? "rgba(255,255,255,.55)" : "var(--ink-4)",

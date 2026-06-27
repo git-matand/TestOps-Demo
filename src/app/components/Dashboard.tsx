@@ -280,15 +280,15 @@ function CenterCompareCard({ centerId, issues }: { centerId: string; issues: Iss
 
 // ─── Center pill ──────────────────────────────────────────────────────────────
 function CenterPill({
-  name, count, avail, active, onClick,
-}: { name: string; count?: number; avail?: number; active: boolean; onClick: () => void }) {
+  name, count, avail, active, onClick, showCheck,
+}: { name: string; count?: number; avail?: number; active: boolean; onClick: () => void; showCheck?: boolean }) {
   const dot = avail === undefined ? null : avail >= 80 ? "ok" : avail >= 50 ? "warn" : "bad";
   return (
     <button
       onClick={onClick}
       style={{
         display: "inline-flex", alignItems: "center", gap: 7,
-        padding: "5px 14px", borderRadius: 20,
+        padding: "5px 14px 5px 10px", borderRadius: 20,
         border: active ? "1.5px solid var(--brand)" : "1.5px solid var(--line-2)",
         background: active ? "var(--brand-dim)" : "var(--panel-2)",
         color: active ? "var(--brand)" : "var(--ink-2)",
@@ -297,6 +297,18 @@ function CenterPill({
         whiteSpace: "nowrap",
       }}
     >
+      {showCheck && (
+        <span style={{
+          width: 14, height: 14, borderRadius: 4, flexShrink: 0,
+          border: active ? "none" : "1.5px solid var(--line-2)",
+          background: active ? "var(--brand)" : "transparent",
+          display: "grid", placeItems: "center",
+        }}>
+          {active && (
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5"><polyline points="20 6 9 17 4 12" /></svg>
+          )}
+        </span>
+      )}
       {dot && (
         <span style={{
           width: 7, height: 7, borderRadius: "50%",
@@ -447,6 +459,7 @@ export function Dashboard({ onBedClick, onGoReports, addToast, role = "engineer"
             Center
           </span>
           <CenterPill name="All Centers" active={sel.includes("all")} onClick={() => toggle("all")} />
+          <span style={{ width: 1, height: 18, background: "var(--line-2)", margin: "0 2px" }} />
           {TEST_CENTERS.map(c => (
             <CenterPill
               key={c.id}
@@ -454,21 +467,38 @@ export function Dashboard({ onBedClick, onGoReports, addToast, role = "engineer"
               count={c.benchIds.length}
               avail={ctrAvail[c.id]}
               active={sel.includes(c.id)}
+              showCheck
               onClick={() => toggle(c.id)}
             />
           ))}
+          {/* Persistent hint */}
           {sel.includes("all") && (
-            <span style={{ fontSize: 11, color: "var(--ink-4)", marginLeft: 4 }}>
-              — click multiple centers to compare
+            <span style={{ fontSize: 11, color: "var(--ink-4)", marginLeft: 4, display: "inline-flex", alignItems: "center", gap: 4 }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 12l2 2 4-4" /></svg>
+              tick two or more centers to compare side-by-side
             </span>
           )}
-          {!sel.includes("all") && sel.length >= 2 && (
-            <span style={{
-              fontSize: 11, color: "var(--brand)", fontWeight: 500,
-              background: "var(--brand-dim)", padding: "2px 8px", borderRadius: 5, marginLeft: 4,
-            }}>
-              {sel.length} centers selected
-            </span>
+          {/* Compare CTA + Clear */}
+          {!sel.includes("all") && sel.length >= 1 && (
+            <>
+              {sel.length >= 2 && (
+                <button onClick={() => document.getElementById("center-comparison")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                  style={{
+                    fontSize: 11.5, fontWeight: 600, color: "#fff", background: "var(--brand)",
+                    border: "none", padding: "4px 11px", borderRadius: 20, marginLeft: 4, cursor: "pointer",
+                    display: "inline-flex", alignItems: "center", gap: 5,
+                  }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="18" rx="1" /><rect x="14" y="3" width="7" height="18" rx="1" /></svg>
+                  Compare ({sel.length})
+                </button>
+              )}
+              <button onClick={() => toggle("all")} style={{
+                fontSize: 11.5, color: "var(--ink-3)", background: "transparent",
+                border: "1px solid var(--line-2)", padding: "4px 10px", borderRadius: 20, cursor: "pointer",
+              }}>
+                Clear
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -523,7 +553,7 @@ export function Dashboard({ onBedClick, onGoReports, addToast, role = "engineer"
 
       {/* ── Side-by-side comparison (2+ centers selected) ───────────────── */}
       {!sel.includes("all") && sel.length >= 2 && (
-        <div className="to-panel" style={{ marginBottom: 20 }}>
+        <div id="center-comparison" className="to-panel" style={{ marginBottom: 20, scrollMarginTop: 16 }}>
           <div className="to-panel-h">
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2">

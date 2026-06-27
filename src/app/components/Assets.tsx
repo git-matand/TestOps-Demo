@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { Asset, DATA, STATUS_MAP, TEST_CENTERS, BENCHES_INITIAL, TestBench } from "../data";
 import { SyncModal } from "./SyncModal";
 import { ScanModal } from "./QRModal";
+import { useRole } from "../roleContext";
 interface Props {
   assets: Asset[];
   onOpenAsset: (tag: string) => void;
@@ -375,6 +376,11 @@ function LicenseModal({ onClose, onSave }: { onClose: () => void; onSave: (l: Li
 }
 
 export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister, onDelete, onClone, onEdit, addToast }: Props) {
+  const { can } = useRole();
+  const mayRegister = can("asset.register");   // HW Engineer
+  const mayTransfer = can("asset.transfer");   // HW Engineer
+  const mayCheckout = can("asset.checkout");   // HW Engineer + Test Engineer
+  const lockTip = "Requires HW Engineer role";
   const [tab, setTab] = useState("registry");
   const [filter, setFilter] = useState("all");
   const [sel, setSel] = useState<Set<string>>(new Set());
@@ -503,7 +509,8 @@ export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister,
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
             Scan QR
           </button>
-          <button className="to-btn primary sm" onClick={onRegister}>
+          <button className="to-btn primary sm" onClick={() => mayRegister && onRegister()} disabled={!mayRegister}
+            title={mayRegister ? undefined : lockTip} style={{ opacity: mayRegister ? 1 : 0.45, cursor: mayRegister ? "pointer" : "not-allowed" }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 5v14M5 12h14"/></svg>
             Register equipment
           </button>
@@ -543,8 +550,10 @@ export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister,
           {sel.size > 0 && (
             <div className="to-bulkbar">
               <b>{sel.size}</b> selected
-              <button className="to-btn primary sm" onClick={() => onCheckout([...sel])}>Bulk checkout</button>
-              <button className="to-btn ghost sm" onClick={() => openTransfer([...sel])}>
+              <button className="to-btn primary sm" onClick={() => mayCheckout && onCheckout([...sel])} disabled={!mayCheckout}
+                title={mayCheckout ? undefined : "Requires checkout permission"} style={{ opacity: mayCheckout ? 1 : 0.45, cursor: mayCheckout ? "pointer" : "not-allowed" }}>Bulk checkout</button>
+              <button className="to-btn ghost sm" onClick={() => mayTransfer && openTransfer([...sel])} disabled={!mayTransfer}
+                title={mayTransfer ? undefined : lockTip} style={{ opacity: mayTransfer ? 1 : 0.45, cursor: mayTransfer ? "pointer" : "not-allowed" }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="15 3 21 3 21 9"/><path d="M21 3L10 14"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
                 Transfer to center
               </button>
@@ -581,17 +590,17 @@ export function Assets({ assets, onOpenAsset, onCheckout, onCheckin, onRegister,
                         <td className="to-muted">{a.location}</td>
                         <td className="to-mono">{a.cost}</td>
                         <td>
-                          {a.status === "ready" && <button className="to-btn primary sm" onClick={() => onCheckout([a.tag])}>Checkout</button>}
-                          {a.status === "deployed" && <button className="to-btn accent sm" onClick={() => onCheckin(a.tag)}>Checkin</button>}
+                          {a.status === "ready" && <button className="to-btn primary sm" onClick={() => mayCheckout && onCheckout([a.tag])} disabled={!mayCheckout} title={mayCheckout ? undefined : "Requires checkout permission"} style={{ opacity: mayCheckout ? 1 : 0.45, cursor: mayCheckout ? "pointer" : "not-allowed" }}>Checkout</button>}
+                          {a.status === "deployed" && <button className="to-btn accent sm" onClick={() => mayCheckout && onCheckin(a.tag)} disabled={!mayCheckout} title={mayCheckout ? undefined : "Requires checkout permission"} style={{ opacity: mayCheckout ? 1 : 0.45, cursor: mayCheckout ? "pointer" : "not-allowed" }}>Checkin</button>}
                           {a.status !== "ready" && a.status !== "deployed" && <span className="to-muted to-mono" style={{fontSize:11}}>—</span>}
                         </td>
                         <td>
                           <div className="to-row" style={{gap:5}}>
                             <button className="to-ract" title="View" onClick={() => onOpenAsset(a.tag)}>{EYE}</button>
-                            <button className="to-ract" title="Edit" onClick={() => onEdit ? onEdit(a.tag) : onOpenAsset(a.tag)}>{PEN}</button>
-                            <button className="to-ract" title="Transfer to Test Center" onClick={() => openTransfer([a.tag])}>{MOVE}</button>
-                            <button className="to-ract" title="Clone" onClick={() => onClone(a.tag)}>{COPY}</button>
-                            <button className="to-ract del" title="Delete" onClick={() => onDelete(a.tag)}>{TRASH}</button>
+                            <button className="to-ract" title={mayRegister ? "Edit" : lockTip} disabled={!mayRegister} style={{ opacity: mayRegister ? 1 : 0.4, cursor: mayRegister ? "pointer" : "not-allowed" }} onClick={() => mayRegister && (onEdit ? onEdit(a.tag) : onOpenAsset(a.tag))}>{PEN}</button>
+                            <button className="to-ract" title={mayTransfer ? "Transfer to Test Center" : lockTip} disabled={!mayTransfer} style={{ opacity: mayTransfer ? 1 : 0.4, cursor: mayTransfer ? "pointer" : "not-allowed" }} onClick={() => mayTransfer && openTransfer([a.tag])}>{MOVE}</button>
+                            <button className="to-ract" title={mayRegister ? "Clone" : lockTip} disabled={!mayRegister} style={{ opacity: mayRegister ? 1 : 0.4, cursor: mayRegister ? "pointer" : "not-allowed" }} onClick={() => mayRegister && onClone(a.tag)}>{COPY}</button>
+                            <button className="to-ract del" title={mayRegister ? "Delete" : lockTip} disabled={!mayRegister} style={{ opacity: mayRegister ? 1 : 0.4, cursor: mayRegister ? "pointer" : "not-allowed" }} onClick={() => mayRegister && onDelete(a.tag)}>{TRASH}</button>
                           </div>
                         </td>
                       </tr>

@@ -4,6 +4,7 @@ import type { Role } from "../App";
 import { upTimelineSVG, makeSeries } from "../utils";
 import { FirmwareFlashSheet, DeviceActionModal } from "./FirmwareFlashSheet";
 import { TsChart, MetricTile, useTelemetryData, type TimeRange } from "./TelemetryCharts";
+import { canControlHardware } from "../permissions";
 
 interface Props {
   bench: TestBench;
@@ -64,6 +65,8 @@ function makeUptimeSegments(bench: TestBench): { up: boolean; frac: number }[] {
 
 export function BenchDetail({ bench, assets, onBack, onOpenAsset, onEdit, addToast, role = "engineer" }: Props) {
   const [tab, setTab] = useState<Tab>("overview");
+  const hw = canControlHardware(role); // HW-Engineer can operate hardware
+  const lockTip = "Requires HW Engineer role";
 
   const visibleTabs = role === "manager"
     ? TABS.filter(t => t.id !== "telemetry" && t.id !== "diagnostics")
@@ -145,7 +148,8 @@ export function BenchDetail({ bench, assets, onBack, onOpenAsset, onEdit, addToa
             </div>
           </div>
           <div className="to-row" style={{ gap: 8, flexWrap: "wrap" }}>
-            <button className="to-btn ghost sm" onClick={onEdit}>
+            <button className="to-btn ghost sm" onClick={onEdit} disabled={!hw} title={hw ? undefined : lockTip}
+              style={{ opacity: hw ? 1 : 0.45, cursor: hw ? "pointer" : "not-allowed" }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
                 <path d="M4 20h4L18 10l-4-4L4 16z" /><path d="M14 6l4 4" />
               </svg>
@@ -160,7 +164,8 @@ export function BenchDetail({ bench, assets, onBack, onOpenAsset, onEdit, addToa
               </button>
             )}
             {richosHosts.length > 0 && (
-              <button className="to-btn ghost sm" onClick={() => setFlashOpen(true)}>
+              <button className="to-btn ghost sm" onClick={() => hw && setFlashOpen(true)} disabled={!hw} title={hw ? undefined : lockTip}
+                style={{ opacity: hw ? 1 : 0.45, cursor: hw ? "pointer" : "not-allowed" }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 3v12M8 11l4 4 4-4M5 21h14"/></svg>
                 Flash firmware
               </button>
@@ -326,13 +331,15 @@ export function BenchDetail({ bench, assets, onBack, onOpenAsset, onEdit, addToa
                     { label: "Start test", sub: "resume queue", icon: '<path d="M7 5v14l11-7z"/>', action: null, cls: "ok" },
                     { label: "Flash firmware", sub: bench.build?.distroVersion || "—", icon: '<path d="M12 3v12M8 11l4 4 4-4M5 21h14"/>', action: null, cls: "brand" },
                   ].map(({ label, sub, icon, action, cls }) => (
-                    <button key={label} disabled={!bench.telemetry.collectorUp && action !== null}
+                    <button key={label} disabled={!hw || (!bench.telemetry.collectorUp && action !== null)}
+                      title={hw ? undefined : lockTip}
                       onClick={() => {
+                        if (!hw) return;
                         if (action === "reset" || action === "stop") setConfirmAction(action);
                         else if (label === "Flash firmware") setFlashOpen(true);
                         else addToast("Test started", "Queue resumed");
                       }}
-                      style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4, padding: "10px 10px", border: "1px solid var(--line)", borderRadius: 8, background: "var(--panel-2)", cursor: bench.telemetry.collectorUp || !action ? "pointer" : "not-allowed", opacity: !bench.telemetry.collectorUp && action !== null ? .4 : 1, transition: ".1s", textAlign: "left" }}>
+                      style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4, padding: "10px 10px", border: "1px solid var(--line)", borderRadius: 8, background: "var(--panel-2)", cursor: !hw || (!bench.telemetry.collectorUp && action) ? "not-allowed" : "pointer", opacity: !hw || (!bench.telemetry.collectorUp && action !== null) ? .4 : 1, transition: ".1s", textAlign: "left" }}>
                       <div style={{ width: 28, height: 28, borderRadius: 7, background: `var(--${cls}-dim)`, display: "grid", placeItems: "center" }}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ color: `var(--${cls})` }} dangerouslySetInnerHTML={{ __html: icon }} />
                       </div>

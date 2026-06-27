@@ -3,6 +3,7 @@ import {
   ResourceRequest, SharingStatus, SHARING_REQUESTS_INITIAL,
   TEST_CENTERS, ASSETS_INITIAL, BENCHES_INITIAL,
 } from "../data";
+import { useRole } from "../roleContext";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const CTR = Object.fromEntries(TEST_CENTERS.map(c => [c.id, c]));
@@ -48,6 +49,8 @@ function RequestCard({
   onReturn:  (id: string) => void;
   onRecall:  (id: string) => void;
 }) {
+  const { can } = useRole();
+  const mayApprove = can("sharing.approve"); // Manager + HW Engineer
   const [rejectMode, setRejectMode] = useState(false);
   const [reason, setReason] = useState("");
   const fromCtr = CTR[req.requesterCenter];
@@ -140,13 +143,18 @@ function RequestCard({
       {/* Actions */}
       {!rejectMode && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {isIncoming && req.status === "pending" && (
+          {isIncoming && req.status === "pending" && (mayApprove ? (
             <>
               <button className="to-btn primary sm" onClick={() => onApprove(req.id)}>Approve</button>
               <button className="to-btn ghost sm" style={{ color: "var(--bad)", borderColor: "var(--bad)" }}
                 onClick={() => setRejectMode(true)}>Reject…</button>
             </>
-          )}
+          ) : (
+            <span style={{ fontSize: 11.5, color: "var(--ink-4)", display: "flex", alignItems: "center", gap: 5 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              Approval requires Manager or HW Engineer role
+            </span>
+          ))}
           {isIncoming && req.status === "active" && (
             <button className="to-btn ghost sm" style={{ color: "var(--warn)", borderColor: "var(--warn)" }}
               onClick={() => onRecall(req.id)}>Recall resource</button>
@@ -187,10 +195,11 @@ function RequestCard({
 
 // ─── Request Sheet ─────────────────────────────────────────────────────────────
 function RequestSheet({
-  onClose, onSubmit,
+  onClose, onSubmit, requesterCenter,
 }: {
   onClose: () => void;
   onSubmit: (req: Omit<ResourceRequest, "id" | "createdAt">) => void;
+  requesterCenter: string;
 }) {
   const [step,        setStep]        = useState<1|2|3>(1);
   const [targetId,    setTargetId]    = useState("");
@@ -245,7 +254,7 @@ function RequestSheet({
   function handleSubmit() {
     onSubmit({
       requesterId: MOCK_USER,
-      requesterCenter: MOCK_CENTER,
+      requesterCenter: requesterCenter,
       targetCenterId: targetId,
       resourceType: resType,
       resourceIds: [...selIds],
@@ -312,7 +321,7 @@ function RequestSheet({
                   Source center (where the resources are)
                 </label>
                 <div style={{ display:"flex", gap:8 }}>
-                  {TEST_CENTERS.filter(c => c.id !== MOCK_CENTER).map(c => {
+                  {TEST_CENTERS.filter(c => c.id !== requesterCenter).map(c => {
                     const cc = CTR_COLOR[c.id] ?? { color:"var(--ink-3)", bg:"var(--panel-2)" };
                     const active = targetId === c.id;
                     return (
@@ -466,7 +475,7 @@ function RequestSheet({
                 <div style={{ fontSize:11, fontWeight:600, color:"var(--ink-3)", textTransform:"uppercase", letterSpacing:".06em", marginBottom:10 }}>Summary</div>
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                   {[
-                    { label:"From", value:`${MOCK_USER} · ${CTR[MOCK_CENTER]?.city}` },
+                    { label:"From", value:`${MOCK_USER} · ${CTR[requesterCenter]?.city}` },
                     { label:"To (source center)", value:`${CTR[targetId]?.city} — ${CTR[targetId]?.name}` },
                     { label:"Resources", value:`${selIds.size} ${resType}${selIds.size > 1 ? "s" : ""}` },
                     { label:"Period", value:`${fmtDate(startDate)} — ${fmtDate(endDate)} (${Math.round((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86_400_000)}d)` },
@@ -534,11 +543,12 @@ export function ResourceSharing({ addToast }: { addToast: (t: string, s?: string
   const [filterStatus,  setFilterStatus]  = useState<SharingStatus | "all">("all");
   const [filterCenter,  setFilterCenter]  = useState("all");
   const [search,        setSearch]        = useState("");
+  const [viewerCenter,  setViewerCenter]  = useState(MOCK_CENTER);
 
   const pending  = requests.filter(r => r.status === "pending");
   const active   = requests.filter(r => r.status === "active");
-  const incoming = requests.filter(r => r.targetCenterId === MOCK_CENTER);
-  const outgoing = requests.filter(r => r.requesterCenter === MOCK_CENTER);
+  const incoming = requests.filter(r => r.targetCenterId === viewerCenter);
+  const outgoing = requests.filter(r => r.requesterCenter === viewerCenter);
   const inPending = incoming.filter(r => r.status === "pending");
 
   function handleApprove(id: string) {
@@ -586,7 +596,7 @@ export function ResourceSharing({ addToast }: { addToast: (t: string, s?: string
     (!search || [r.id, r.requesterId, r.purpose, ...r.resourceIds].join(" ").toLowerCase().includes(search.toLowerCase()))
   );
 
-  const CARD_PROPS = { viewerCenter: MOCK_CENTER, onApprove: handleApprove, onReject: handleReject, onReturn: handleReturn, onRecall: handleRecall };
+  const CARD_PROPS = { viewerCenter, onApprove: handleApprove, onReject: handleReject, onReturn: handleReturn, onRecall: handleRecall };
 
   return (
     <div className="to-screen">
@@ -604,6 +614,14 @@ export function ResourceSharing({ addToast }: { addToast: (t: string, s?: string
               {inPending.length} awaiting your approval
             </span>
           )}
+          {/* Perspective switch (IMPROVEMENT_PLAN #6) */}
+          <div style={{ display:"flex", alignItems:"center", gap:6, padding:"3px 4px 3px 10px", borderRadius:8, border:"1px solid var(--line-2)", background:"var(--panel-2)" }}>
+            <span style={{ fontSize:11.5, color:"var(--ink-4)" }}>Viewing as</span>
+            <select value={viewerCenter} onChange={e => setViewerCenter(e.target.value)}
+              style={{ height:28, borderRadius:6, border:"1px solid var(--line-2)", background:"var(--panel)", color:"var(--ink)", fontSize:12.5, fontWeight:600, padding:"0 6px", cursor:"pointer" }}>
+              {TEST_CENTERS.map(c => <option key={c.id} value={c.id}>{c.city}</option>)}
+            </select>
+          </div>
           <button className="to-btn primary sm" onClick={() => setSheetOpen(true)}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
             New request
@@ -645,7 +663,7 @@ export function ResourceSharing({ addToast }: { addToast: (t: string, s?: string
           <div>
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
               <h3 style={{ fontSize:14, fontWeight:660, color:"var(--ink)", margin:0 }}>
-                Incoming — to {CTR[MOCK_CENTER]?.city}
+                Incoming — to {CTR[viewerCenter]?.city}
               </h3>
               <span style={{ fontSize:11, color:"var(--ink-4)" }}>{incoming.length} total</span>
             </div>
@@ -663,7 +681,7 @@ export function ResourceSharing({ addToast }: { addToast: (t: string, s?: string
           <div>
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
               <h3 style={{ fontSize:14, fontWeight:660, color:"var(--ink)", margin:0 }}>
-                Outgoing — from {CTR[MOCK_CENTER]?.city}
+                Outgoing — from {CTR[viewerCenter]?.city}
               </h3>
               <span style={{ fontSize:11, color:"var(--ink-4)" }}>{outgoing.length} total</span>
             </div>
@@ -750,10 +768,10 @@ export function ResourceSharing({ addToast }: { addToast: (t: string, s?: string
                         </td>
                         <td>
                           <div style={{ display:"flex", gap:5 }}>
-                            {r.requesterCenter === MOCK_CENTER && (
+                            {r.requesterCenter === viewerCenter && (
                               <button className="to-btn ghost sm" style={{ fontSize:11 }} onClick={() => handleReturn(r.id)}>Return</button>
                             )}
-                            {r.targetCenterId === MOCK_CENTER && (
+                            {r.targetCenterId === viewerCenter && (
                               <button className="to-btn ghost sm" style={{ fontSize:11, color:"var(--warn)", borderColor:"var(--warn)" }} onClick={() => handleRecall(r.id)}>Recall</button>
                             )}
                           </div>
@@ -846,7 +864,7 @@ export function ResourceSharing({ addToast }: { addToast: (t: string, s?: string
       )}
 
       {sheetOpen && (
-        <RequestSheet onClose={() => setSheetOpen(false)} onSubmit={handleSubmit} />
+        <RequestSheet onClose={() => setSheetOpen(false)} onSubmit={handleSubmit} requesterCenter={viewerCenter} />
       )}
     </div>
   );

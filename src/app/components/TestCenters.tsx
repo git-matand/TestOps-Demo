@@ -1,5 +1,10 @@
 import { useState } from "react";
 import { TestCenter, TestBench, Asset, ASSETS_INITIAL, BENCHES_INITIAL, TEST_CENTERS as ALL_CENTERS } from "../data";
+import {
+  computeCenterMetrics, computeHealthScore, computeCenterEconomics,
+  computeCenterIssues, topAssetsByValue,
+} from "../lib/centerMetrics";
+import { useRole } from "../roleContext";
 import { MapView } from "./MapView";
 
 // ─── City → Coordinates lookup ────────────────────────────────────────────────
@@ -832,13 +837,20 @@ function EditCenterModal({ center, onClose, onSave }: { center: TestCenter; onCl
 }
 
 // ─── Detail View ──────────────────────────────────────────────────────────────
-function DetailView({ center, benches, onBack, onSave, onDelete }: {
+interface BenchMove { benchId: string; benchName: string; from: string; to: string; ts: string }
+
+function DetailView({ center, benches, allCenters, moves, onTransferBench, onBack, onSave, onDelete }: {
   center: TestCenter;
   benches: TestBench[];
+  allCenters: TestCenter[];
+  moves: BenchMove[];
+  onTransferBench: (benchId: string, toId: string) => void;
   onBack: () => void;
   onSave: (e: CenterEdits) => void;
   onDelete: () => void;
 }) {
+  const { can } = useRole();
+  const mayManage = can("center.manage"); // Manager only
   const [tab, setTab]           = useState<DetailTab>("overview");
   const [editOpen, setEditOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -916,12 +928,13 @@ function DetailView({ center, benches, onBack, onSave, onDelete }: {
             </div>
           </div>
           <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-            <button className="to-btn ghost sm" onClick={() => setEditOpen(true)}>
+            <button className="to-btn ghost sm" onClick={() => mayManage && setEditOpen(true)} disabled={!mayManage}
+              title={mayManage ? undefined : "Requires Manager role"} style={{ opacity: mayManage ? 1 : 0.45, cursor: mayManage ? "pointer" : "not-allowed" }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 20h4L18 10l-4-4L4 16z"/><path d="M14 6l4 4"/></svg>
               Edit
             </button>
             {/* ⋮ menu */}
-            <div style={{ position:"relative" }}>
+            {mayManage && <div style={{ position:"relative" }}>
               {menuOpen && <div style={{ position:"fixed", inset:0, zIndex:9 }} onClick={() => setMenuOpen(false)} />}
               <button className="to-btn ghost sm" onClick={() => setMenuOpen(o => !o)}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
@@ -947,7 +960,7 @@ function DetailView({ center, benches, onBack, onSave, onDelete }: {
                   </button>
                 </div>
               )}
-            </div>
+            </div>}
           </div>
         </div>
 
@@ -959,7 +972,7 @@ function DetailView({ center, benches, onBack, onSave, onDelete }: {
           {[
             { icon: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", label: "Manager",    value: meta.manager },
             { icon: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",                             label: "Benches",    value: `${cb.length} total` },
-            { icon: "M3 3h18v4H3zM3 10h18v4H3zM3 17h18v4H3z",                                         label: "Test Beds",  value: `${beds} beds` },
+            { icon: "M3 3h18v4H3zM3 10h18v4H3zM3 17h18v4H3z",                                         label: "Capacity",   value: `${beds} beds · ${Math.round(beds * meta.utilization / 100)} in use (${meta.utilization}%)` },
             { icon: "M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16", label: "Assets", value: `${assets.length} registered` },
             { icon: "M12 8v4l3 3M3.05 11a9 9 0 1 0 .5-2.69",                                          label: "Online since", value: meta.since },
           ].map((item, i, arr) => (
@@ -1035,9 +1048,140 @@ function DetailView({ center, benches, onBack, onSave, onDelete }: {
 
       {/* Tab content */}
       {tab === "overview"  && <OverviewTab  center={center} benches={cb} meta={meta} pct={pct} st={st} events={events} assetCount={assets.length} teamCount={team.length} />}
-      {tab === "benches"   && <BenchesTab   benches={cb} />}
+      {tab === "benches"   && <BenchesTab   benches={cb} center={center} allCenters={allCenters} moves={moves} onTransferBench={onTransferBench} />}
       {tab === "assets"    && <AssetsTab    assets={assets} />}
       {tab === "teams"     && <TeamsTab     team={team} />}
+    </div>
+  );
+}
+
+// ─── Health Score gauge (donut ring) ─────────────────────────────────────────
+function HealthGauge({ score, fill, label }: { score: number; fill: string; label: string }) {
+  const r = 52, c = 2 * Math.PI * r, arc = (score / 100) * c;
+  return (
+    <div style={{ position: "relative", width: 132, height: 132, flexShrink: 0 }}>
+      <svg width="132" height="132" viewBox="0 0 132 132" style={{ transform: "rotate(-90deg)" }}>
+        <circle cx="66" cy="66" r={r} fill="none" stroke="var(--line-2)" strokeWidth="11" />
+        <circle cx="66" cy="66" r={r} fill="none" stroke={fill} strokeWidth="11"
+          strokeLinecap="round" strokeDasharray={`${arc} ${c}`} />
+      </svg>
+      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ fontFamily: "var(--disp)", fontSize: 34, fontWeight: 800, color: fill, lineHeight: 1 }}>{score}</div>
+        <div style={{ fontSize: 10.5, fontWeight: 600, color: fill, textTransform: "uppercase", letterSpacing: ".05em", marginTop: 3 }}>{label}</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Center Health + Economics panel (IMPROVEMENT_PLAN #4) ────────────────────
+function CenterHealthPanel({ center, utilization }: { center: TestCenter; utilization: number }) {
+  const m    = computeCenterMetrics(center, utilization);
+  const hs   = computeHealthScore(center, m);
+  const econ = computeCenterEconomics(center, m);
+
+  const QUAD_COLOR: Record<string, string> = {
+    "Efficient & Lean":    "var(--ok)",
+    "Efficient & Costly":  "var(--warn)",
+    "Underused & Lean":    "var(--warn)",
+    "Underused & Costly":  "var(--bad)",
+  };
+  const quadColor = QUAD_COLOR[econ.quadrant];
+
+  return (
+    <div className="to-grid to-g12" style={{ marginBottom: 16 }}>
+      {/* Health Score */}
+      <div className="to-s6">
+        <div className="to-panel" style={{ height: "100%" }}>
+          <div className="to-panel-h">
+            <span className="to-eyebrow">Center Health Score</span>
+            <span style={{ fontSize: 10.5, color: "var(--ink-4)" }}>weighted · 0–100</span>
+          </div>
+          <div className="to-panel-b" style={{ display: "flex", gap: 18, alignItems: "center" }}>
+            <HealthGauge score={hs.score} fill={hs.fill} label={hs.label} />
+            <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 9 }}>
+              {hs.breakdown.map(row => (
+                <div key={row.label}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                    <span style={{ fontSize: 11.5, color: "var(--ink-2)" }}>
+                      {row.label} <span style={{ color: "var(--ink-4)", fontSize: 10 }}>·{Math.round(row.weight * 100)}%</span>
+                    </span>
+                    <span style={{ fontSize: 11, color: "var(--ink-4)", fontFamily: "var(--mono)" }}>{row.rawLabel}</span>
+                  </div>
+                  <div style={{ height: 5, borderRadius: 3, background: "var(--panel-3)", overflow: "hidden" }}>
+                    <div style={{ width: `${row.points}%`, height: "100%", background: hs.fill, opacity: 0.85, borderRadius: 3 }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Cost vs Efficiency */}
+      <div className="to-s6">
+        <div className="to-panel" style={{ height: "100%" }}>
+          <div className="to-panel-h">
+            <span className="to-eyebrow">Cost vs Efficiency</span>
+            <span style={{ fontSize: 10.5, fontWeight: 600, color: quadColor, background: `color-mix(in srgb, ${quadColor} 12%, transparent)`, padding: "2px 8px", borderRadius: 5 }}>
+              {econ.quadrant}
+            </span>
+          </div>
+          <div className="to-panel-b">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14 }}>
+              {[
+                { lab: "Weekly cost", val: "€" + econ.totalWeeklyCost.toLocaleString(), col: "var(--ink)" },
+                { lab: "Efficiency",  val: econ.efficiencyPct + "%", col: econ.efficiencyPct >= 60 ? "var(--ok)" : "var(--warn)" },
+                { lab: "€/eff-point", val: "€" + econ.costPerEffPoint.toLocaleString(), col: "var(--ink)" },
+              ].map(k => (
+                <div key={k.lab} style={{ background: "var(--panel-2)", borderRadius: 8, padding: "10px 12px" }}>
+                  <div style={{ fontSize: 10, color: "var(--ink-4)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>{k.lab}</div>
+                  <div style={{ fontSize: 17, fontWeight: 700, fontFamily: "var(--disp)", color: k.col }}>{k.val}</div>
+                </div>
+              ))}
+            </div>
+            {/* Quadrant chart */}
+            <QuadrantChart center={center} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Quadrant scatter (all centers, current highlighted) ──────────────────────
+function QuadrantChart({ center }: { center: TestCenter }) {
+  const W = 100, H = 92, pad = 6;
+  const points = ALL_CENTERS.map(c => {
+    const e = computeCenterEconomics(c, computeCenterMetrics(c, META[c.id]?.utilization));
+    return { id: c.id, city: c.city, cost: e.totalWeeklyCost, eff: e.efficiencyPct, current: c.id === center.id };
+  });
+  const costs = points.map(p => p.cost);
+  const minC = Math.min(...costs) * 0.9, maxC = Math.max(...costs) * 1.05;
+  const x = (cost: number) => pad + ((cost - minC) / (maxC - minC || 1)) * (W - pad * 2);
+  const y = (eff: number) => H - pad - (eff / 100) * (H - pad * 2);
+
+  return (
+    <div style={{ position: "relative" }}>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: 130 }}>
+        {/* quadrant guides */}
+        <line x1={W / 2} y1={pad} x2={W / 2} y2={H - pad} stroke="var(--line-2)" strokeWidth="0.5" strokeDasharray="2 2" />
+        <line x1={pad} y1={y(60)} x2={W - pad} y2={y(60)} stroke="var(--line-2)" strokeWidth="0.5" strokeDasharray="2 2" />
+        {points.map(p => (
+          <g key={p.id}>
+            <circle cx={x(p.cost)} cy={y(p.eff)} r={p.current ? 4.5 : 3}
+              fill={p.current ? "var(--brand)" : "var(--ink-4)"}
+              stroke={p.current ? "var(--brand)" : "none"} strokeWidth="0.5"
+              opacity={p.current ? 1 : 0.55} />
+            <text x={x(p.cost)} y={y(p.eff) - 6} fontSize="5" textAnchor="middle"
+              fill={p.current ? "var(--brand)" : "var(--ink-4)"} fontWeight={p.current ? 700 : 400}>{p.city}</text>
+          </g>
+        ))}
+      </svg>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9.5, color: "var(--ink-4)", marginTop: 2 }}>
+        <span>← lower cost</span>
+        <span>higher efficiency ↑</span>
+        <span>higher cost →</span>
+      </div>
     </div>
   );
 }
@@ -1051,27 +1195,90 @@ function OverviewTab({ center, benches, meta, pct, st, events, assetCount, teamC
   assetCount: number; teamCount: number;
 }) {
   const up = benches.filter(b => b.status === "Up").length;
+  const [drill, setDrill] = useState<string | null>(null);
+  const m = computeCenterMetrics(center, meta.utilization);
+  const issues = computeCenterIssues(center);
+  const topAssets = topAssetsByValue(center);
+
   const kpis = [
-    { label: "Bench Availability", value: pct + "%", color: st.color, sub: `${up} of ${benches.length} benches Up` },
-    { label: "Bed Utilization",    value: meta.utilization + "%", color: meta.utilization >= 70 ? "var(--warn)" : "var(--ok)", sub: "active test beds" },
-    { label: "Active Campaigns",   value: String(meta.campaigns), color: "var(--ink)", sub: "running right now" },
-    { label: "Assets",             value: String(assetCount), color: "var(--ink)", sub: `${teamCount} team members` },
+    { key: "avail",     label: "Bench Availability", value: pct + "%", color: st.color, sub: `${up} of ${benches.length} benches Up`, drillable: m.downCt + m.maintCt > 0 },
+    { key: "util",      label: "Bed Utilization",    value: meta.utilization + "%", color: meta.utilization >= 70 ? "var(--warn)" : "var(--ok)", sub: "active test beds", drillable: false },
+    { key: "issues",    label: "Open Issues",        value: String(issues.length), color: issues.length > 0 ? "var(--bad)" : "var(--ok)", sub: "click to inspect", drillable: issues.length > 0 },
+    { key: "assets",    label: "Asset Value",        value: "€" + topAssets.reduce((s, a) => s + a.value, 0).toLocaleString(), color: "var(--ink)", sub: `${assetCount} registered · top 5`, drillable: topAssets.length > 0 },
   ];
 
   return (
     <>
-      {/* KPI row */}
-      <div className="to-grid to-g12" style={{ marginBottom: 16 }}>
-        {kpis.map(k => (
-          <div key={k.label} className="to-s3">
-            <div className="to-kpi">
-              <div className="lab">{k.label}</div>
-              <div className="val" style={{ color: k.color }}>{k.value}</div>
-              <div style={{ fontSize: 10.5, color: "var(--ink-4)", marginTop: 4 }}>{k.sub}</div>
+      {/* Health Score + Economics (IMPROVEMENT_PLAN #4) */}
+      <CenterHealthPanel center={center} utilization={meta.utilization} />
+      {/* KPI row — clickable for drill-down */}
+      <div className="to-grid to-g12" style={{ marginBottom: drill ? 0 : 16 }}>
+        {kpis.map(k => {
+          const active = drill === k.key;
+          return (
+            <div key={k.key} className="to-s3">
+              <div className="to-kpi"
+                onClick={() => k.drillable && setDrill(active ? null : k.key)}
+                style={{
+                  cursor: k.drillable ? "pointer" : "default",
+                  border: active ? "1px solid var(--brand)" : undefined,
+                  transition: "border-color .12s",
+                }}>
+                <div className="lab" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  {k.label}
+                  {k.drillable && (
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-4)" strokeWidth="2"
+                      style={{ transform: active ? "rotate(180deg)" : "none", transition: "transform .15s" }}>
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  )}
+                </div>
+                <div className="val" style={{ color: k.color }}>{k.value}</div>
+                <div style={{ fontSize: 10.5, color: k.drillable ? "var(--brand)" : "var(--ink-4)", marginTop: 4 }}>{k.sub}</div>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
+
+      {/* Drill-down panel */}
+      {drill && (
+        <div className="to-panel" style={{ marginBottom: 16, borderColor: "var(--brand)" }}>
+          <div className="to-panel-h">
+            <span className="to-eyebrow">
+              {drill === "avail" ? "Unavailable benches" : drill === "issues" ? "Open issues" : "Top assets by value"}
+            </span>
+            <button className="to-btn ghost sm" style={{ fontSize: 11 }} onClick={() => setDrill(null)}>Close</button>
+          </div>
+          <div className="to-panel-b">
+            {drill === "avail" && benches.filter(b => b.status === "Down" || b.status === "Maintenance").map(b => (
+              <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
+                <Dot c={b.status === "Down" ? "bad" : "low"} />
+                <span style={{ fontSize: 13, fontWeight: 500, flex: 1 }}>{b.name} <span style={{ color: "var(--ink-4)", fontWeight: 400 }}>· {b.id}</span></span>
+                <span style={{ fontSize: 11.5, color: SC[b.status] || "var(--ink-3)" }}>{b.status}</span>
+              </div>
+            ))}
+            {drill === "issues" && issues.map(iss => (
+              <div key={iss.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
+                <Dot c={iss.sev === "critical" ? "bad" : "warn"} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 500 }}>{iss.title}</div>
+                  <div style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 1 }}>{iss.detail}</div>
+                </div>
+                <span style={{ fontSize: 10, fontWeight: 600, color: iss.sev === "critical" ? "var(--bad)" : "var(--warn)", textTransform: "uppercase" }}>{iss.sev}</span>
+              </div>
+            ))}
+            {drill === "assets" && topAssets.map(a => (
+              <div key={a.tag} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
+                <span style={{ fontSize: 12.5, fontFamily: "var(--mono)", color: "var(--ink-3)", minWidth: 56 }}>#{a.tag}</span>
+                <span style={{ fontSize: 13, fontWeight: 500, flex: 1 }}>{a.model}</span>
+                <span style={{ fontSize: 11.5, color: "var(--ink-4)" }}>{a.location}</span>
+                <span style={{ fontSize: 13, fontWeight: 600, fontFamily: "var(--mono)" }}>€{a.value.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="to-grid to-g12">
         {/* Bench status breakdown */}
@@ -1149,18 +1356,43 @@ function OverviewTab({ center, benches, meta, pct, st, events, assetCount, teamC
 }
 
 // ─── Benches Tab ──────────────────────────────────────────────────────────────
-function BenchesTab({ benches }: { benches: TestBench[] }) {
+function BenchesTab({ benches, center, allCenters, moves, onTransferBench }: {
+  benches: TestBench[]; center: TestCenter; allCenters: TestCenter[];
+  moves: BenchMove[]; onTransferBench: (benchId: string, toId: string) => void;
+}) {
+  const { can } = useRole();
+  const mayTransfer = can("asset.transfer"); // HW Engineer
+  const [movePopover, setMovePopover] = useState<string | null>(null);
+  const otherCenters = allCenters.filter(c => c.id !== center.id);
+  const cityOf = (id: string) => allCenters.find(c => c.id === id)?.city ?? id;
+
   return (
     <div className="to-panel">
       <div className="to-panel-h">
         <span className="to-eyebrow">Test Benches</span>
         <span style={{ fontSize: 11, color: "var(--ink-4)" }}>{benches.length} total</span>
       </div>
+
+      {/* Transfer history */}
+      {moves.length > 0 && (
+        <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--line)", background: "var(--panel-2)" }}>
+          <div style={{ fontSize: 10.5, fontWeight: 600, color: "var(--ink-4)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 6 }}>Recent transfers</div>
+          {moves.slice(0, 4).map((m, i) => (
+            <div key={i} style={{ fontSize: 12, color: "var(--ink-2)", display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2"><polyline points="15 3 21 3 21 9"/><path d="M21 3L10 14"/></svg>
+              <b style={{ fontWeight: 600 }}>{m.benchName}</b>
+              <span style={{ color: "var(--ink-4)" }}>{cityOf(m.from)} → {cityOf(m.to)}</span>
+              <span style={{ color: "var(--ink-4)", marginLeft: "auto", fontFamily: "var(--mono)", fontSize: 10.5 }}>{m.ts}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="to-panel-b" style={{ padding: 0 }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ borderBottom: "1px solid var(--line)" }}>
-              {["Status", "Bench", "Host platform", "CPU", "Disk", "Last change", "Coredumps"].map(h => (
+              {["Status", "Bench", "Host platform", "CPU", "Disk", "Last change", "Coredumps", ""].map(h => (
                 <th key={h} style={{ padding: "9px 14px", textAlign: "left", fontSize: 11, fontWeight: 500, color: "var(--ink-4)", letterSpacing: ".04em", textTransform: "uppercase" }}>{h}</th>
               ))}
             </tr>
@@ -1206,6 +1438,47 @@ function BenchesTab({ benches }: { benches: TestBench[] }) {
                     ? <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--bad)" }}>{b.coredumps.length} dump{b.coredumps.length > 1 ? "s" : ""}</span>
                     : <span style={{ fontSize: 11.5, color: "var(--ink-4)" }}>—</span>
                   }
+                </td>
+                <td style={{ padding: "10px 14px", position: "relative" }}>
+                  <button
+                    onClick={() => mayTransfer && setMovePopover(movePopover === b.id ? null : b.id)}
+                    disabled={!mayTransfer}
+                    title={mayTransfer ? "Move to another center" : "Requires HW Engineer role"}
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 4, height: 26, padding: "0 9px",
+                      borderRadius: 6, border: "1px solid var(--line-2)", background: "var(--panel-2)",
+                      color: "var(--ink-2)", fontSize: 11.5, cursor: mayTransfer ? "pointer" : "not-allowed",
+                      opacity: mayTransfer ? 1 : 0.4, whiteSpace: "nowrap",
+                    }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="15 3 21 3 21 9"/><path d="M21 3L10 14"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+                    Move
+                  </button>
+                  {movePopover === b.id && (
+                    <>
+                      <div style={{ position: "fixed", inset: 0, zIndex: 19 }} onClick={() => setMovePopover(null)} />
+                      <div style={{
+                        position: "absolute", top: "calc(100% + 2px)", right: 14, zIndex: 20,
+                        background: "var(--panel)", border: "1px solid var(--line-2)", borderRadius: 8,
+                        boxShadow: "0 8px 24px rgba(0,0,0,.14)", padding: 5, minWidth: 180,
+                      }}>
+                        <div style={{ fontSize: 10.5, color: "var(--ink-4)", padding: "4px 8px 6px", textTransform: "uppercase", letterSpacing: ".05em" }}>Move to center</div>
+                        {otherCenters.map(oc => (
+                          <button key={oc.id}
+                            onClick={() => { onTransferBench(b.id, oc.id); setMovePopover(null); }}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 8, width: "100%",
+                              padding: "8px 8px", borderRadius: 6, border: "none", background: "transparent",
+                              fontSize: 12.5, color: "var(--ink)", cursor: "pointer", textAlign: "left",
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.background = "var(--panel-2)")}
+                            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" strokeWidth="1.7"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                            {oc.city}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}
@@ -1371,9 +1644,12 @@ function ViewToggle({ view, onChange }: { view: "grid" | "map"; onChange: (v: "g
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 export function TestCenters({ centers, benches, onOpenCenter }: Props) {
+  const { can } = useRole();
+  const mayManage = can("center.manage"); // Manager only
   const [selected, setSelected]     = useState<string | null>(null);
   const [modalOpen, setModalOpen]   = useState(false);
   const [localCenters, setLocalCenters] = useState<TestCenter[]>([...centers]);
+  const [benchMoves, setBenchMoves] = useState<BenchMove[]>([]);
   const [view, setView]             = useState<"grid" | "map">("grid");
 
   function handleSave(id: string, edits: CenterEdits) {
@@ -1383,6 +1659,20 @@ export function TestCenters({ centers, benches, onOpenCenter }: Props) {
     setLocalCenters(prev => prev.filter(c => c.id !== id));
     setSelected(null);
   }
+  function handleTransferBench(benchId: string, toId: string) {
+    const fromCenter = localCenters.find(c => c.benchIds.includes(benchId));
+    const bench = benches.find(b => b.id === benchId);
+    if (!fromCenter || fromCenter.id === toId) return;
+    setLocalCenters(prev => prev.map(c => {
+      if (c.id === fromCenter.id) return { ...c, benchIds: c.benchIds.filter(id => id !== benchId) };
+      if (c.id === toId) return { ...c, benchIds: [...c.benchIds, benchId] };
+      return c;
+    }));
+    setBenchMoves(prev => [{
+      benchId, benchName: bench?.name ?? benchId, from: fromCenter.id, to: toId,
+      ts: new Date().toLocaleString("en", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+    }, ...prev]);
+  }
 
   if (selected) {
     const center = localCenters.find(c => c.id === selected);
@@ -1391,6 +1681,9 @@ export function TestCenters({ centers, benches, onOpenCenter }: Props) {
         <DetailView
           center={center}
           benches={benches}
+          allCenters={localCenters}
+          moves={benchMoves.filter(m => m.from === center.id || m.to === center.id)}
+          onTransferBench={handleTransferBench}
           onBack={() => setSelected(null)}
           onSave={edits => handleSave(center.id, edits)}
           onDelete={() => handleDelete(center.id)}
@@ -1414,7 +1707,8 @@ export function TestCenters({ centers, benches, onOpenCenter }: Props) {
         </div>
         <div className="to-head-actions">
           <ViewToggle view={view} onChange={setView} />
-          <button className="to-btn primary sm" onClick={() => setModalOpen(true)}>
+          <button className="to-btn primary sm" onClick={() => mayManage && setModalOpen(true)} disabled={!mayManage}
+            title={mayManage ? undefined : "Requires Manager role"} style={{ opacity: mayManage ? 1 : 0.45, cursor: mayManage ? "pointer" : "not-allowed" }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
             New Center
           </button>

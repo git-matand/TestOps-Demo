@@ -20,6 +20,9 @@ import { CreateBenchSheet } from "./components/CreateBenchSheet";
 import { Teams } from "./components/Teams";
 import { ResourceSharing } from "./components/ResourceSharing";
 import { IntegrationHub } from "./components/IntegrationHub";
+import { RoleContext } from "./roleContext";
+import { ROLE_ACCESS_BADGE, can } from "./permissions";
+import { AccessDenied } from "./components/AccessDenied";
 
 type Screen = "ops" | "assets" | "edge" | "campaigns" | "ai" | "reports" | "members" | "logs" | "roadmap" | "benches" | "centers" | "teams" | "sharing" | "integrations";
 
@@ -182,6 +185,7 @@ export default function App() {
 
   return (
     <div className="testops" data-theme={theme} style={{"--brand": BRAND_CONFIG.primaryColor} as React.CSSProperties}>
+      <RoleContext.Provider value={currentRole}>
       <div className="to-app">
         {/* Rail */}
         <aside className={`to-rail ${railOpen ? "show" : ""}`}>
@@ -329,6 +333,14 @@ export default function App() {
               <span className="kbd">⏎</span>
             </form>
             <div className="to-top-actions">
+              <div title={`Access scope: ${ROLE_ACCESS_BADGE[currentRole]}`} style={{
+                display:"flex", alignItems:"center", gap:5, height:28, padding:"0 10px",
+                borderRadius:7, fontSize:11.5, fontWeight:600,
+                background:"var(--brand-dim)", color:"var(--brand)", border:"1px solid color-mix(in srgb, var(--brand) 25%, transparent)",
+              }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/></svg>
+                {ROLE_ACCESS_BADGE[currentRole]}
+              </div>
               <div className="to-status-pill"><span className="to-dot live" />HW-LAB-PL-01 · 10/12 beds</div>
               <button className="to-iconbtn" title="alerts" onClick={() => go("ops")}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
@@ -345,11 +357,11 @@ export default function App() {
             {screen === "ai" && <AIInsights answer={aiAnswer} onQuery={handleQuery} onOpenDUT={openDUTDrawer} />}
             {screen === "reports" && <Reports addToast={addToast} />}
             {screen === "teams"   && <Teams addToast={addToast} />}
-            {screen === "members" && <Members />}
-            {screen === "logs"    && <Logs />}
+            {screen === "members" && (can(currentRole, "admin.view") ? <Members /> : <AccessDenied section="Members" currentRole={currentRole} requires="Manager" />)}
+            {screen === "logs"    && (can(currentRole, "admin.view") ? <Logs /> : <AccessDenied section="Audit Logs" currentRole={currentRole} requires="Manager" />)}
             {screen === "roadmap" && <Roadmap />}
             {screen === "sharing" && <ResourceSharing addToast={addToast} />}
-            {screen === "integrations" && <IntegrationHub addToast={addToast} />}
+            {screen === "integrations" && (can(currentRole, "integration.manage") ? <IntegrationHub addToast={addToast} /> : <AccessDenied section="Integration Hub" currentRole={currentRole} requires="Manager" />)}
             {screen === "centers" && (
               <TestCenters
                 centers={TEST_CENTERS}
@@ -558,6 +570,7 @@ export default function App() {
           </div>
         ))}
       </div>
+      </RoleContext.Provider>
     </div>
   );
 }

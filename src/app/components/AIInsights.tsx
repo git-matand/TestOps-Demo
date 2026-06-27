@@ -13,7 +13,7 @@ function benchesForCenter(centerId: string) {
 }
 
 // How many DUTs one bench handles in parallel per campaign type
-const DUT_PER_BENCH: Record<string, number> = {
+export const DUT_PER_BENCH: Record<string, number> = {
   "Smoke":       6,
   "Regression":  3,
   "Endurance":   2,
@@ -28,7 +28,7 @@ const OVERHEAD_RATE        = 0.12;
 
 const PRIORITY_START_DAYS: Record<string, number> = { high: 1, medium: 5, low: 12 };
 
-interface SimParams {
+export interface SimParams {
   centerId: string;
   campaignType: string;
   dutCount: number;
@@ -66,7 +66,7 @@ function fmtDate(d: Date): string {
   return d.toLocaleDateString("en", { month:"short", day:"numeric", year:"numeric" });
 }
 
-function runSimulation(p: SimParams): SimResult {
+export function runSimulation(p: SimParams): SimResult {
   const allCenter = benchesForCenter(p.centerId);
   const benches = p.selectedBenchIds.length > 0
     ? BENCHES_INITIAL.filter(b => p.selectedBenchIds.includes(b.id))
