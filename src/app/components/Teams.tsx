@@ -784,23 +784,19 @@ export function Teams({ addToast }: Props) {
         </div>
       </div>
 
-      {/* ── Summary KPI row ─────────────────────────────────────────────── */}
-      <div style={{ display:"flex", gap:12, marginBottom:24 }}>
+      {/* ── Summary KPI cards ───────────────────────────────────────────── */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(5, 1fr)", gap:12, marginBottom:24 }}>
         {[
           { label:"Engineers",       val:ENGINEERS.length, sub:"registered",                        color:"var(--ink)"   },
           { label:"Available Now",   val:availableCt,      sub:"ready for assignment",              color:"var(--ok)"    },
           { label:"Teams",           val:teams.length,     sub:"active",                            color:"var(--brand)" },
           { label:"Centers Covered", val:centersCt,        sub:`of ${TEST_CENTERS.length} total`,   color:"var(--ink)"   },
           { label:"Member Slots",    val:memberSlots,      sub:"across all teams",                  color:"var(--ink)"   },
-        ].map((k, i, arr) => (
-          <div key={k.label} style={{
-            flex:1, minWidth:0,
-            padding: "0 18px",
-            borderRight: i < arr.length - 1 ? "1px solid var(--line)" : "none",
-          }}>
-            <div style={{ fontSize:12, fontWeight:600, color:"var(--ink-4)", textTransform:"uppercase", letterSpacing:".07em", marginBottom:8 }}>{k.label}</div>
-            <div style={{ fontWeight:700, fontSize:26, lineHeight:1, color:k.color, fontVariantNumeric:"tabular-nums", letterSpacing:"-.03em" }}>{k.val}</div>
-            <div style={{ fontSize:12, fontWeight:500, color:"var(--ink-3)", marginTop:5 }}>{k.sub}</div>
+        ].map(k => (
+          <div key={k.label} className="to-kpi">
+            <div className="lab">{k.label}</div>
+            <div className="val" style={{ color:k.color }}>{k.val}</div>
+            <div className="to-delta flat">{k.sub}</div>
           </div>
         ))}
       </div>
