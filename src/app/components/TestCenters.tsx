@@ -964,32 +964,31 @@ function DetailView({ center, benches, allCenters, moves, onTransferBench, onBac
           </div>
         </div>
 
-        {/* Info strip */}
+        {/* Info cards */}
         <div style={{
-          display: "flex", gap: 0, marginTop: 16, flexWrap: "wrap",
-          borderTop: "1px solid var(--line)", paddingTop: 14,
+          display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12,
+          marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--line)",
         }}>
-          {[
-            { icon: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", label: "Manager",    value: meta.manager },
-            { icon: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",                             label: "Benches",    value: `${cb.length} total` },
-            { icon: "M3 3h18v4H3zM3 10h18v4H3zM3 17h18v4H3z",                                         label: "Capacity",   value: `${beds} beds · ${Math.round(beds * meta.utilization / 100)} in use (${meta.utilization}%)` },
-            { icon: "M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16", label: "Assets", value: `${assets.length} registered` },
-            { icon: "M12 8v4l3 3M3.05 11a9 9 0 1 0 .5-2.69",                                          label: "Online since", value: meta.since },
-          ].map((item, i, arr) => (
-            <div key={i} style={{
-              display: "flex", alignItems: "center", gap: 8,
-              padding: "4px 20px 4px 0", marginRight: 20,
-              borderRight: i < arr.length - 1 ? "1px solid var(--line)" : "none",
-            }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" strokeWidth="1.7">
-                <path d={item.icon}/>
-              </svg>
-              <div>
-                <div style={{ fontSize: 10, color: "var(--ink-4)", textTransform: "uppercase", letterSpacing: ".06em" }}>{item.label}</div>
-                <div style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-2)" }}>{item.value}</div>
+          {(() => {
+            const inUse = Math.round(beds * meta.utilization / 100);
+            const cards: { label: string; value: string; sub: string; num: boolean; unit?: string; color?: string }[] = [
+              { label: "Manager",      value: meta.manager,          sub: "test manager",                            num: false },
+              { label: "Benches",      value: String(cb.length),     sub: "total",                                   num: true },
+              { label: "Capacity",     value: String(beds),          sub: `${inUse} in use · ${meta.utilization}%`,   num: true, unit: "beds", color: meta.utilization >= 70 ? "var(--warn)" : "var(--ok)" },
+              { label: "Assets",       value: String(assets.length), sub: "registered",                              num: true },
+              { label: "Online since", value: meta.since,            sub: "operational",                             num: false },
+            ];
+            return cards.map(c => (
+              <div key={c.label} className="to-kpi">
+                <div className="lab">{c.label}</div>
+                <div className="val" style={{ color: c.color, ...(c.num ? {} : { fontSize: 17 }) }}>
+                  {c.value}
+                  {c.unit && <span style={{ fontSize: 13, color: "var(--ink-3)", fontWeight: 400, marginLeft: 4 }}>{c.unit}</span>}
+                </div>
+                <div className="to-delta flat">{c.sub}</div>
               </div>
-            </div>
-          ))}
+            ));
+          })()}
         </div>
       </div>
 
