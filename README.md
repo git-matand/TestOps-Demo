@@ -1,7 +1,7 @@
 
   # TestOps
 
-  This is a code bundle for TestOps. The original project is available at https://www.figma.com/design/ybaOsSSKQ5jxw7JIXsVP0X/TestOps.
+  This is a code bundle for TestOps. 
 
   ## Running the code
 
